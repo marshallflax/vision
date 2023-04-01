@@ -51,6 +51,7 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * Created in 2005 by the creator of Linux, Linus Torvalds, to serve the thousands of collaborators who have contributed tens of millions of lines of code to Linux.
   * It keeps track on your computer of every version of every file it stores.
   * It was originally used for computer code, but it works equally well for any form of plain text.
+  * The history of this essay is stored in Git ... you can see how it evolved over time.
 * GitHub
   * A central Git repository allowing users to synchronize their repositories with each other.
   * Provides an easy-to-use web interface allowing people to view the contents of repositories without installing anything on their local machines.
@@ -70,22 +71,35 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * The "VSCode" IDE is free to use, free to tinker upon, supported by Microsoft, widely available, and is probably used by a majority of developers nowadays.
   * This essay was written inside a normal VSCode window.
 
-## A hypothetical class
+## Example: The Structured Glossary
 
-* Today's class begins with the teacher sharing laptop screen.
-  * VSCode is totally free software created by Microsoft but available for Macs, Windows, Linux, and even ChromeOS.
-  * VSCode is now used by a majority of software developers, and its popularity continues to grow.
-  * VSCode is highly extensible and has a rich ecosystem of free extensions.
-* On the screen is a text document, which looks like plain text, with three notable exceptions.
-  (1) Some lines start with a number of `#` symbols ... these automatically go to a Table of Contents.
-  (2) Some lines start with some spaces and then a `*` ... these of course define an outline structure.
-  (3) Some blocks of text are surrounded by ` ```mermaid ` ... these use simple text define diagrams.  
-  * If you are viewing this essay on GitHub, just press the "Raw" button to see exactly what we're describing here.
-* Students also are running VSCode on their laptops.
-  They also have a copy of the same document, but it doesn't reflect the additions the teacher made last night.
-  But with one or two clicks, their screens update to the current version.
-  Or they can choose to just watch the instructor's screenshare.
-  * Students with visual impairments will probably choose to rely on their own VSCode, as it can be customized with appropriate color palettes, magnification, screen readers, or braille displays.
+```mermaid
+mindmap
+ Structured Glossary
+  Organized Thematically
+  Real Time Editing are 21st Century Blackboard Talks
+  Continuous Incremental Improvement
+   Clarification of Existing Explanations
+   Additional Examples
+  Instructor Frequently Models Careful Organization of Large Topics
+  Comprehensive Summary of the Course To Date
+   Eliminates Duplicative Creation of Review Materials
+  Natural Opportunities for Active Learning
+   Students Can Draft Additions and Improvements
+  Beautiful Documents
+   Headings
+   Outlines
+   Mind Maps
+   Other Diagrams
+```
+
+As an example of the power of the above tools, let me create an imaginary class and show how they can combine to allow a restructuring of an ordinary class.
+
+* The class begins with the teacher sharing their laptop screen.
+* On the left side of the screen is a text document, in the above Markdown format.
+  On the right side of the screen is the formatted version, with beautiful layout and colorful diagrams.
+* Students can also have the document on their laptops if they wish, or they can follow from the teacher's shared screen.
+  (Students with visual impairments will probably choose to rely on their own computers, as it can be customized with appropriate color palettes, magnification, screen readers, or braille displays.)
 * The document they're all viewing is a structured glossary for the current course.
   It is always a work-in-progress.
   As new terminology and concepts are added, they are added to the document.
@@ -97,15 +111,15 @@ For reference, these are the technologies which I'm hoping will find truly wides
   With a single right-click, the teacher can see all of the recent changes, organized into logical chunks.
   The teacher clicks on any one of them, and the screen highlights all of the changes, with deleted lines in red and new lines in green.
   Some of the additions are familiar to the students from the prior day, but the teacher may also use this as an opportunity to introduce new material.
-  * In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.
+* (In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.)
 * As yesterday's changes are reviewed, the teacher finds that there other concepts for which the students need additional explanations.
-  The teacher navigates to that part of the structured glossary and VSCode becomes a 21st-century blackboard as the teacher adds some nested bullet points with additional examples and glosses.
+  The teacher navigates to that part of the structured glossary and the editor becomes a 21st-century blackboard as the teacher adds some nested bullet points with additional examples and glosses.
   Simple diagrams can be added just as easily as plain text.
   At the end of the mini-lesson, the improvements are described with a short phrase and pushed to GitHub with two or three clicks.
   With another click or two, students can update their laptops, or they can wait until convenient.
   These changes will then of course be available for review the next class day.
 
-Let's stop here for a moment.  What do we have here?
+Let's stop here for a moment.  What are the advantages of this approach?
 
 * Students no longer refer to out-of-date or only-partially-applicable powerpoints.
 * No more questions of "what's on the final".
