@@ -1,10 +1,10 @@
 # Active learning with modern tools
 
-```mermaid
-%%{init: {'theme':'forest'}}%%
+## Introduction
 
+```mermaid
 mindmap
- 21st Century
+ 21st Century Innovations and Dangers
   Innovations
    Pedagogy
     Active Learning
@@ -16,35 +16,63 @@ mindmap
     Behavior First
     Collaborate With Tools
   Dangers
-   NCLB
+   No Child Left Behind
     Teaching to the Test
     Cookie Cutter Curricula 
+    Teachers as Interchangeable Cogs
    Developers as Interchangeable Cogs
 ```
 
-## Introduction
-
 This essay is an attempt at cross-polination from the world of modern software development to the world of K-12 education.
 Humanity has been seriously thinking about computation for at least a century, but the explosion over the past twenty years in the power and usability of the core tools used by software developers is quite extraordinary.
-I believe it is time for some of these tools to escape the narrow confines of IT and enter widespread use in education.
-These are transformative technologies and cannot just be forklifted into existing educational structures, but I believe that they are consistent with and amplify the best currents in modern educational practices.
+I believe that some of these tools are now sufficiently mature and useful that they deserve to escape the narrow confines of IT and enter widespread use in education.
+These are transformative technologies and cannot just be dropped into existing educational structures, but I believe that they are consistent with and amplify the best currents in modern educational practices.
 
-## Mutually-reinforcing tools
+## Transformative technologies
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
-
 mindmap
- A Synergy of Tools
-  Git and GitHub
-  Integrated Development Environments, such as VSCode
-  MarkDown
-  Agile Development
+ Transformative Technologies
+  "Git" and "GitHub"
+    Low overhead collaboration. 
+    Simple visibility into every version of every document.
+    Works well on any sort of text files
+  "Markdown"
+   Beautiful documents with low overhead layout and simple diagrams from text files.
+   Once documents are merely text, then we can use advanced collaboration tools.
+  "IDEs"
+   One tool to install; one tool to learn; one tool to teach.
+   The ultimate Swiss Army knife: it renders Markdown, talks to Git and GitHub, does spell checking, and offers a vibrant culture of free extensions.
 ```
 
-As with describing any highly-syngergetic system, it is difficult to know where to begin. So let me start in the middle, and give an example of how these tools can be used in an educational setting. Feel free to read only the top-level bullets and ignore the additional glosses.
+For reference, these are the technologies which I'm hoping will find truly widespread adoption. Their power won't be immediately apparent until we see some examples how they can be used together, but they should be at least introduced: 
 
-* Today's class begins with the teacher sharing VSCode on their laptop.
+* Git
+  * Created in 2005 by the creator of Linux, Linus Torvalds, to serve the thousands of collaborators who have contributed tens of millions of lines of code to Linux.
+  * It keeps track on your computer of every version of every file it stores.
+  * It was originally used for computer code, but it works equally well for any form of plain text.
+* GitHub
+  * A central Git repository allowing users to synchronize their repositories with each other.
+  * Provides an easy-to-use web interface allowing people to view the contents of repositories without installing anything on their local machines.
+  * This essay is available at <https://github.com/marshallflax/vision/blob/main/README.md>
+* MarkDown
+  * Simple punctuation which adds structure to a text document.
+    * Lines which begin with `#`, `##`, `###`, `####` become headings in a table-of-contents.
+    * Lines which begin with `*` are bullet points; indentation lets you create nested lists.
+    * Quotes are preceeded with `>`.
+  * No need to use the mouse and menus to italicize a word ... just surround with `_`.
+  * Because rich documents are now just text, we can use modern text-based collaboration tools.
+  * This essay is written in MarkDown. The raw MarkDown is available on the right-hand side of <https://github.com/marshallflax/vision/blame/main/README.md>.
+* Integrated Development Environments
+  * A single tool designed by programmers to make programmer's life easier and more efficient.
+  * A text editor which is aware of the structure of the files it edits.
+  * Modern programming is a *collaboration* between the developer and their IDE ... it is aware of the syntactic requirements of programming languages and gives immediately grammatical feedback.
+  * The "VSCode" IDE is free to use, free to tinker upon, supported by Microsoft, widely available, and is probably used by a majority of developers nowadays.
+  * This essay was written inside a normal VSCode window.
+
+## A hypothetical class
+
+* Today's class begins with the teacher sharing laptop screen.
   * VSCode is totally free software created by Microsoft but available for Macs, Windows, Linux, and even ChromeOS.
   * VSCode is now used by a majority of software developers, and its popularity continues to grow.
   * VSCode is highly extensible and has a rich ecosystem of free extensions.
