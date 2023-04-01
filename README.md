@@ -42,11 +42,11 @@ mindmap
     Simple visibility into every version of every document.
     Works well on any sort of text files
   "Markdown"
-   Beautiful documents with low overhead layout and simple diagrams from text files.
-   Once documents are merely text, then we can use advanced collaboration tools.
+   Beautiful documents with low overhead layout and diagrams from text files.
+   Once documents are merely text, then we can use advanced collaboration tools designed for code.
   "IDEs"
    One tool to install; one tool to learn; one tool to teach.
-   The ultimate Swiss Army knife: it renders Markdown, talks to Git and GitHub, does spell checking, and offers a vibrant culture of free extensions.
+   A Swiss Army knife: it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
 ```
 
 For reference, these are the technologies which I'm hoping will find truly widespread adoption. Their power won't be immediately apparent until we see some examples how they can be used together, but they should be at least introduced: 
@@ -91,9 +91,11 @@ mindmap
    Clarification of Existing Explanations
    Additional Examples
   Comprehensive Summary of the Course To Date
+   A Living Document. Low friction improvement.
    Eliminates Duplicative Creation of Review Materials
   Natural Opportunities for Active Learning
    Students Can Draft Additions and Improvements
+   Teacher Updates the Text in Real Time in Response to Questions.
 ```
 
 As an example of the power of the above tools, let me create an imaginary class and show how they can combine to allow a restructuring of an ordinary class.
@@ -147,6 +149,8 @@ mindmap
   Daily Standup
    DID/NEXT/BLOCKERS
    Develop the Habit of Reflection
+  Teams of Students Have Shared Repositories
+   Tools Designed For Cooperative Development
 ```
 
 Teacher-generated content is important, but active learning occurs when students generate their own contents.
