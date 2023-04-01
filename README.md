@@ -83,27 +83,22 @@ For reference, these are the technologies which I'm hoping will find truly wides
 mindmap
  Structured Glossary
   Organized Thematically
-  Real Time Editing are 21st Century Blackboard Talks
-  Continuous Incremental Improvement
-   Clarification of Existing Explanations
-   Additional Examples
-  Instructor Frequently Models Careful Organization of Large Topics
-  Comprehensive Summary of the Course To Date
-   Eliminates Duplicative Creation of Review Materials
-  Natural Opportunities for Active Learning
-   Students Can Draft Additions and Improvements
-  Beautiful Documents
    Headings
    Outlines
    Mind Maps
    Other Diagrams
+  Real Time Editing is the 21st Century Blackboard Talk
+   Clarification of Existing Explanations
+   Additional Examples
+  Comprehensive Summary of the Course To Date
+   Eliminates Duplicative Creation of Review Materials
+  Natural Opportunities for Active Learning
+   Students Can Draft Additions and Improvements
 ```
 
 As an example of the power of the above tools, let me create an imaginary class and show how they can combine to allow a restructuring of an ordinary class.
 
-* The class begins with the teacher sharing their laptop screen.
-* On the left side of the screen is a text document, in the above Markdown format.
-  On the right side of the screen is the formatted version, with beautiful layout and colorful diagrams.
+* The class begins with the teacher sharing their laptop screen.  On the left side of the screen is a text document, in the above Markdown format.  On the right side of the screen is the formatted version, with beautiful layout and colorful diagrams.
 * Students can also have the document on their laptops if they wish, or they can follow from the teacher's shared screen.
   (Students with visual impairments will probably choose to rely on their own computers, as it can be customized with appropriate color palettes, magnification, screen readers, or braille displays.)
 * The document they're all viewing is a structured glossary for the current course.
@@ -124,8 +119,10 @@ As an example of the power of the above tools, let me create an imaginary class 
   At the end of the mini-lesson, the improvements are described with a short phrase and pushed to GitHub with two or three clicks.
   With another click or two, students can update their laptops, or they can wait until convenient.
   These changes will then of course be available for review the next class day.
+* The formatted version of the Structured Glossary is always available at the GitHub website, and is available without anything except a web browser.
 
-Let's stop here for a moment.  What are the advantages of this approach?
+Let's stop here for a moment.
+What are the advantages of this approach?
 
 * Students no longer refer to out-of-date or only-partially-applicable powerpoints.
 * No more questions of "what's on the final".
@@ -135,3 +132,25 @@ Let's stop here for a moment.  What are the advantages of this approach?
   (As a side-note, I don't know of a purer application of active learning than to have the student themself draft the improvements.)
 * A live master-class by the teacher in how to organize (and periodically reorganize) large quantities of information.
 * Repeated modelling by the teacher of incremental improvement towards excellence.
+
+## Example: Journaling
+
+```mermaid
+%%{init: {'theme':'forest'}}%%
+
+mindmap
+ Student Generated Content
+  Thematic Journaling 
+   Beautiful Mindmaps
+   Organizing and Reorganizing as a Lifelong Skill
+   Essays and Papers Evolve Naturally
+  Daily Standup
+   DID/NEXT/BLOCKERS
+   Develop the Habit of Reflection
+```
+
+Teacher-generated content is important, but active learning occurs when students generate their own contents.
+A student can have a single repository containing many files. One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
+Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
+Of course, the real purpose is to teach the student the Agile philosophy: continual self-improvement to excellence.
+But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
