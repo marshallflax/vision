@@ -69,4 +69,21 @@ As with describing any highly-syngergetic system, it is difficult to know where 
   With a single right-click, the teacher can see all of the recent changes, organized into logical chunks.
   The teacher clicks on any one of them, and the screen highlights all of the changes, with deleted lines in red and new lines in green.
   Some of the additions are familiar to the students from the prior day, but the teacher may also use this as an opportunity to introduce new material.
-* In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.
+  * In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.
+* As yesterday's changes are reviewed, the teacher finds that there other concepts for which the students need additional explanations.
+  The teacher navigates to that part of the structured glossary and VSCode becomes a 21st-century blackboard as the teacher adds some nested bullet points with additional examples and glosses.
+  Simple diagrams can be added just as easily as plain text.
+  At the end of the mini-lesson, the improvements are described with a short phrase and pushed to GitHub with two or three clicks.
+  With another click or two, students can update their laptops, or they can wait until convenient.
+  These changes will then of course be available for review the next class day.
+
+Let's stop here for a moment.  What do we have here?
+
+* Students no longer refer to out-of-date or only-partially-applicable powerpoints.
+* No more questions of "what's on the final".
+* No more duplicative work creating review materials.
+* When a student has a question on a previously-covered topic, the first question can simply be: "did you check the structured glossary"?
+  But when they have, then we have *two* followups: (1) a mini-lesson for the student, and (2) clarifications and/or additions to the glossary.
+  (As a side-note, I don't know of a purer application of active learning than to have the student themself draft the improvements.)
+* A live master-class by the teacher in how to organize (and periodically reorganize) large quantities of information.
+* Repeated modelling by the teacher of incremental improvement towards excellence.
