@@ -3,6 +3,8 @@
 ## Introduction
 
 ```mermaid
+%%{init: {'theme':'forest'}}%%
+
 mindmap
  21st Century Innovations and Dangers
   Innovations
@@ -31,6 +33,8 @@ These are transformative technologies and cannot just be dropped into existing e
 ## Transformative technologies
 
 ```mermaid
+%%{init: {'theme':'forest'}}%%
+
 mindmap
  Transformative Technologies
   "Git" and "GitHub"
@@ -74,6 +78,8 @@ For reference, these are the technologies which I'm hoping will find truly wides
 ## Example: The Structured Glossary
 
 ```mermaid
+%%{init: {'theme':'forest'}}%%
+
 mindmap
  Structured Glossary
   Organized Thematically
