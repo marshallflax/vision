@@ -3,7 +3,7 @@
 ## Introduction
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
+%%{init:{'theme':'forest'}}%%
 
 mindmap
  21st Century Innovations and Dangers
@@ -12,11 +12,10 @@ mindmap
     Active Learning
     Flipped Classrooms
     Universal Design
-   Software Design
-    Agile Methodologies
-    Collaboration Time Machines
-    Behavior First
-    Collaborate With Tools
+   Software Development
+    GitHub
+    Markup Languages
+    Integrated Development Environments
   Dangers
    No Child Left Behind
     Teaching to the Test
@@ -33,7 +32,7 @@ These are transformative technologies and cannot just be dropped into existing e
 ## Transformative technologies
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
+%%{init:{'theme':'forest'}}%%
 
 mindmap
  Transformative Technologies
@@ -72,13 +71,13 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * A single tool designed by programmers to make programmer's life easier and more efficient.
   * A text editor which is aware of the structure of the files it edits.
   * Modern programming is a *collaboration* between the developer and their IDE ... it is aware of the syntactic requirements of programming languages and gives immediately grammatical feedback.
-  * The "VSCode" IDE is free to use, free to tinker upon, supported by Microsoft, widely available, and is probably used by a majority of developers nowadays.
+  * The VSCode IDE is free, supported by Microsoft, widely available, and is probably used by a majority of developers nowadays.
   * This essay was written inside a normal VSCode window.
 
 ## Example: The Structured Glossary
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
+%%{init:{'theme':'forest'}}%%
 
 mindmap
  Structured Glossary
@@ -138,6 +137,8 @@ What are the advantages of this approach?
 ## Example: Journaling
 
 ```mermaid
+%%{init:{'theme':'forest'}}%%
+
 mindmap
  Student Generated Content
   Thematic Journaling 
@@ -154,5 +155,5 @@ mindmap
 Teacher-generated content is important, but active learning occurs when students generate their own content.
 A student can have a single repository containing many files. One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
 Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
-Of course, the real purpose is to teach the student the Agile philosophy: continual self-improvement to excellence.
+Of course, the real purpose is to teach the student continual self-improvement.
 But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
