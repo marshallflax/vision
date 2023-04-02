@@ -3,8 +3,6 @@
 ## Introduction
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
-
 mindmap
  21st Century Innovations and Dangers
   Innovations
@@ -33,8 +31,6 @@ These are transformative technologies and cannot just be dropped into existing e
 ## Transformative technologies
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
-
 mindmap
  Transformative Technologies
   "Git" and "GitHub"
@@ -78,8 +74,6 @@ For reference, these are the technologies which I'm hoping will find truly wides
 ## Example: The Structured Glossary
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
-
 mindmap
  Structured Glossary
   Organized Thematically
@@ -94,8 +88,8 @@ mindmap
    A Living Document. Low friction improvement.
    Eliminates Duplicative Creation of Review Materials
   Natural Opportunities for Active Learning
-   Students Can Draft Additions and Improvements
-   Teacher Updates the Text in Real Time in Response to Questions.
+   Ask Students To Draft Additions and Improvements
+   Students and Teachers Collaborate to Improve the Document
 ```
 
 As an example of the power of the above tools, let me create an imaginary class and show how they can combine to allow a restructuring of an ordinary class.
@@ -138,8 +132,6 @@ What are the advantages of this approach?
 ## Example: Journaling
 
 ```mermaid
-%%{init: {'theme':'forest'}}%%
-
 mindmap
  Student Generated Content
   Thematic Journaling 
@@ -153,7 +145,7 @@ mindmap
    Tools Designed For Cooperative Development
 ```
 
-Teacher-generated content is important, but active learning occurs when students generate their own contents.
+Teacher-generated content is important, but active learning occurs when students generate their own content.
 A student can have a single repository containing many files. One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
 Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
 Of course, the real purpose is to teach the student the Agile philosophy: continual self-improvement to excellence.
