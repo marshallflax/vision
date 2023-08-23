@@ -24,10 +24,14 @@ mindmap
    Developers as Interchangeable Cogs
 ```
 
-This essay is an attempt at cross-polination from the world of modern software development to the world of K-12 education.
+---
+
+This essay is an attempt at cross-pollination from the world of modern software development to the world of K-12 education.
 Humanity has been seriously thinking about computation for at least a century, but the explosion over the past twenty years in the power and usability of the core tools used by software developers is quite extraordinary.
 I believe that some of these tools are now sufficiently mature and useful that they deserve to escape the narrow confines of IT and enter widespread use in education.
 These are transformative technologies and cannot just be dropped into existing educational structures, but I believe that they are consistent with and amplify the best currents in modern educational practices.
+
+---
 
 ## Transformative technologies
 
@@ -48,7 +52,9 @@ mindmap
    A Swiss Army knife: it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
 ```
 
-For reference, these are the technologies which I'm hoping will find truly widespread adoption. Their power won't be immediately apparent until we see some examples how they can be used together, but they should be at least introduced: 
+---
+
+For reference, these are the technologies which I'm hoping will find truly widespread adoption. Their power won't be immediately apparent until we see some examples how they can be used together, but they should be at least introduced:
 
 * Git
   * Created in 2005 by the creator of Linux, Linus Torvalds, to serve the thousands of collaborators who have contributed tens of millions of lines of code to Linux.
@@ -63,7 +69,7 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * Simple punctuation which adds structure to a text document.
     * Lines which begin with `#`, `##`, `###`, `####` become headings in a table-of-contents.
     * Lines which begin with `*` are bullet points; indentation lets you create nested lists.
-    * Quotes are preceeded with `>`.
+    * Quotes are preceded with `>`.
   * No need to use the mouse and menus to italicize a word ... just surround with `_`.
   * Because rich documents are now just text, we can use modern text-based collaboration tools.
   * This essay is written in MarkDown. The raw MarkDown is available on the right-hand side of <https://github.com/marshallflax/vision/blame/main/README.md>.
@@ -73,6 +79,8 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * Modern programming is a *collaboration* between the developer and their IDE ... it is aware of the syntactic requirements of programming languages and gives immediately grammatical feedback.
   * The VSCode IDE is free, supported by Microsoft, widely available, and is probably used by a majority of developers nowadays.
   * This essay was written inside a normal VSCode window.
+
+---
 
 ## Example: The Structured Glossary
 
@@ -134,6 +142,8 @@ What are the advantages of this approach?
 * A live master-class by the teacher in how to organize (and periodically reorganize) large quantities of information.
 * Repeated modelling by the teacher of incremental improvement towards excellence.
 
+---
+
 ## Example: Journaling
 
 ```mermaid
@@ -157,7 +167,6 @@ A student can have a single repository containing many files. One file might be 
 Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
 Of course, the real purpose is to teach the student continual self-improvement.
 But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
-
 
 Shield: [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
 
