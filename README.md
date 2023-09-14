@@ -1,6 +1,4 @@
-# Active learning with modern tools
-
-## Introduction
+# Active learning; Modern tools
 
 ```mermaid
 %%{init:{'theme':'forest'}}%%
@@ -33,6 +31,8 @@ These are transformative technologies and cannot just be dropped into existing e
 
 ---
 
+<Pack scale=0.90>
+
 ## Transformative technologies
 
 ```mermaid
@@ -41,16 +41,18 @@ These are transformative technologies and cannot just be dropped into existing e
 mindmap
  Transformative Technologies
   "Git" and "GitHub"
-    Low overhead collaboration. 
+    Transparent low-overhead collaboration. 
     Simple visibility into every version of every document.
     Works well on any sort of text files
-  "Markdown"
+  "Markdown" and "Mermaid"
    Beautiful documents with low overhead layout and diagrams from text files.
    Once documents are merely text, then we can use advanced collaboration tools designed for code.
-  "IDEs"
+  "Integrated Development Environments, eg VSCode"
    One tool to install; one tool to learn; one tool to teach.
    A Swiss Army knife: it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
 ```
+
+</Pack>
 
 ---
 
@@ -105,6 +107,8 @@ mindmap
    Students and Teachers Collaborate to Improve the Document
 ```
 
+---
+
 As an example of the power of the above tools, let me create an imaginary class and show how they can combine to allow a restructuring of an ordinary class.
 
 * The class begins with the teacher sharing their laptop screen.  On the left side of the screen is a text document, in the above Markdown format.  On the right side of the screen is the formatted version, with beautiful layout and colorful diagrams.
@@ -117,6 +121,9 @@ As an example of the power of the above tools, let me create an imaginary class 
   Colorful mindmaps are scattered throughout.
   This document is organized thematically, not chronologically.
   The automatic table-of-contents feature is quite useful here.
+
+---
+
 * The teacher has a practice of starting the day with a review of all changes to this document since the prior class day.
   With a single right-click, the teacher can see all of the recent changes, organized into logical chunks.
   The teacher clicks on any one of them, and the screen highlights all of the changes, with deleted lines in red and new lines in green.
@@ -129,6 +136,8 @@ As an example of the power of the above tools, let me create an imaginary class 
   With another click or two, students can update their laptops, or they can wait until convenient.
   These changes will then of course be available for review the next class day.
 * The formatted version of the Structured Glossary is always available at the GitHub website, and is available without anything except a web browser.
+
+---
 
 Let's stop here for a moment.
 What are the advantages of this approach?
@@ -162,11 +171,15 @@ mindmap
    Tools Designed For Cooperative Development
 ```
 
+---
+
 Teacher-generated content is important, but active learning occurs when students generate their own content.
 A student can have a single repository containing many files. One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
 Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
 Of course, the real purpose is to teach the student continual self-improvement.
 But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
+
+---
 
 Shield: [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
 

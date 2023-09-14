@@ -1,0 +1,17 @@
+.slidev-layout li {
+    line-height: 1.4em;
+}
+
+.slidev-layout td, .slidev-layout th {
+    padding: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.slidev-layout code {
+    font-family: 'Iosevka Fixed',monospace,"Courier New"; 
+    font-weight: 700;  
+    --prism-background: #707070;
+    padding-bottom: 0px;
+    padding-top: 0px;
+}
