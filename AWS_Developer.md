@@ -162,7 +162,7 @@
 
 ## AWS Infrastructure -- <https://aws.amazon.com/about-aws/global-infrastructure/>
 
-- Regions, Availability Zones (3-6 per region, a-f), Data Centers, Edge/PoP
+- Regions, Availability Zones "AZ" (3-6 per region, a-f), Data Centers, Edge/PoP
 - Most services are region-scoped
   - Global: IAM, Route 53 (DNS), CloudFront CDN, Web App Firewall (WAF)
 - Regions: compliance, proximity, availability, pricing
@@ -181,3 +181,41 @@
 - JS, Python, PHP, .NET, Ruby, Java, Go, Node.js, C++
 - Mobile -- Android, iOS
 - IoT -- Arduino, Embedded C, ...
+
+## EC2 -- Elastic Compute Cloud
+
+- VMs -- EC2 (Linux, Windows, MacOS)
+  - Bootstrap scrip -- EC2 User Data -- Installing updates, packages, common files
+- Network attached storage -- EBS or EFS
+- Hardware storage -- EC2 Instance Store
+- Virtual Drives -- EBS
+- Load Distribution -- ELB
+- Autoscaling Group -- ASG
+- Network: speed, Public IP, firewall
+  - Security Groups allow network traffic (i.e., no "deny" rules)
+  - Security Groups are for a specific region/VPC (Virtual Private Cloud) combination
+  - Permitting another SG really permits EC2 instances with the other SG.
+  - 21 (FTP), 3389 (RDP)
+
+### Instance types (<https://instances.vantage.sh/>)
+
+- t2.micro (1CPU, 1GiB, EBS only) -- 750 hours/month free
+- t2.xlarge (4CPU, 16GiB, ESB only)
+- r5.16xlarge (64CPU, 512GiB, 400NVMe SSD, 10Gbps network, 4.75Gbps EBS)
+- Prefixes
+  - C -- Compute
+  - R,X,Z -- RAM (e.g. databases, etc)
+  - I,D,H -- High bandwidth sequential read/write local storage
+
+### Amazon Machine Image (AMI)
+
+- Amazon Linux is free-tier-eligible
+
+## Storage
+
+### Elastic Block Storage (EBS) Volume
+
+- Persistent network drive bound to an AZ (Availability Zone), unless you snapshot it, etc.
+- Provisioned in GBs and IOPS (and billed by provisioned capacity, which can increase over time).
+- May be "delete-on-termination" (default for root volumes)
+- Multi-attach is beyond the scope of this class.
