@@ -159,3 +159,25 @@
 - Migration/Transfer -- Application Discover Service, Application Migration Service, Database Migration Service
 - Security/Identity/Compliance -- AWS Shield
 - Storage -- Snow, Storage Gateway
+
+## AWS Infrastructure -- <https://aws.amazon.com/about-aws/global-infrastructure/>
+
+- Regions, Availability Zones (3-6 per region, a-f), Data Centers, Edge/PoP
+- Most services are region-scoped
+  - Global: IAM, Route 53 (DNS), CloudFront CDN, Web App Firewall (WAF)
+- Regions: compliance, proximity, availability, pricing
+
+### IAM
+
+- Groups contain (many-to-many) users
+- Users and groups can be assigned (many-to-many) JSON policy documents (containing statements -- Effect(Allow,Deny)/Principal(account/user/role)/Action(service:method)/Resource triples)/Condition
+- Roles assign permissions to trusted entities -- AWS service (e.g., EC2 or Lambda), AWS account, Web Identity, SAML 2.0 federation, etc --  to act on our behalf.
+- Account-level IAM Credentials Report (.csv)
+- User-level IAM Access Advisor
+- Responsibility shared between AWS and account owner
+
+### SDK
+
+- JS, Python, PHP, .NET, Ruby, Java, Go, Node.js, C++
+- Mobile -- Android, iOS
+- IoT -- Arduino, Embedded C, ...
