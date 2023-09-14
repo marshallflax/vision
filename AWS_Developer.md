@@ -1,4 +1,4 @@
-# AWS Developer (Associate)
+# AWS Developer (Associate, DBA-C02)
 
 ## Knowledge
 
@@ -97,4 +97,65 @@
 - Infrastructure as Code (IaC) -- SAM templates, CloudFormation templates
 - API Gateway environments
 
-### 
+### Task 4 -- Code deployment
+
+- Git, AWS CodeCommit, labels and branches
+- AWS CodePipeline workflow and approvals
+- AppConfig and SecretsManager for app configs
+- CI/CD workflow
+- API Gateway -- stages, custom domains
+- Strategies -- canary, blue/green, rolling, rollbacks, dynamic deployments
+
+---
+
+## Domain 4 -- Troubleshooting and Optimization
+
+### Task 1 -- Root Cause
+
+- Logging and monitoring -- CloudWatch Logs Insights, CloudWatch Embedded Metric Format (EMF)
+- Visualizations, AWS X-Ray
+- Code analysis tools
+- HTTP codes, Common SDK exceptions
+
+### Task 2 -- Instrumentation
+
+- Structured logging, distributed tracing (and annotations)
+- Logging, monitoring, observability
+- Application metrics -- custom, embedded, builtin
+- Notification alerts (e.g. quota, or deployment completion)
+
+### Task 3 -- Optimization
+
+- Caching (using request headers), concurrency, messaging (Simple Queue Service, Simple Notification Service, filtering)
+- Profiling -- determining memory and compute requirements
+
+---
+
+## Scope
+
+### Features in scope
+
+- Analytics -- Athena, Kinesis, OpenSearch
+- App Integration -- AppSync, EventBridge, Simple Notification Service, Simple Queue Service, Step Functions
+- Compute -- EC2, Elastic Beanstalk, Lambda, Serverless Application Model (SAM)
+- Containers -- Copilot, Elastic Container Registry (ECR), Elastic Container Service (ECS), Elastic Kubernetes Service (EKR)
+- Database -- Aurora, DynamoDB, ElastiCache, MemoryDB for Redis, RDS
+- Developer -- Amplify, Cloud9, CloudShell, CodeArtifact, CodeBuilt, CodeCommit, CodeDeploy, CodeGuru, CodePipeline, CodeStar, CodeWhisperer, X-Ray
+- Management/Governance -- AppConfig, CLI, Cloud Development Kit, CloudFormation (CDK), CloudTrail, CloudWatch, CloudWatch Logs, System Manager
+- Networking -- API Gateway, CloudFront, Elastic Load Balancing (ELB), Route 53, VPC
+- Security/Identity/Compliance -- Certificate manager (ACM), Cognito, IAM, Key Management Service (KMS), Private Cert Authority, Secrets Manager, Security Token Service (STS), WAF
+- Storage -- Elastic Block Store (EBS), Elastic File System (EFS), S3, S3 Glacier
+
+### Features out of scope
+
+- Analytics -- QuickSight
+- Business -- Chime, Connect, WorkMail
+- EndUser -- AppStream 2.0, Workspace
+- Frontend -- Device Farm
+- Game -- GameLift
+- ML -- Lex, ML, Polly, Rekognition
+- Management/Governance -- AWS Managed Services (AMS), Service Catalog
+- Media -- Elastic Transcoder
+- Migration/Transfer -- Application Discover Service, Application Migration Service, Database Migration Service
+- Security/Identity/Compliance -- AWS Shield
+- Storage -- Snow, Storage Gateway
