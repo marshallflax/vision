@@ -205,17 +205,83 @@
 - Prefixes
   - C -- Compute
   - R,X,Z -- RAM (e.g. databases, etc)
-  - I,D,H -- High bandwidth sequential read/write local storage
+  - I,D,H -- High bandwidth sequential read/write local storage ("Instance Store")
 
 ### Amazon Machine Image (AMI)
 
 - Amazon Linux is free-tier-eligible
+
+---
 
 ## Storage
 
 ### Elastic Block Storage (EBS) Volume
 
 - Persistent network drive bound to an AZ (Availability Zone), unless you snapshot it, etc.
+  - Only attachable to EC2 instances in same AZ, of course.
+  - Detachment "recommended" before snapshotting. Snapshotting required to copy EBS volume to another AZ.
+  - Snapshots can be "archived" with 24h-72h recall but 75% discount.
+  - Deleted snapshots (and deleted AMIs) reside 1d-365d (per Retention Rule) in the "Recycle Bin"
+  - Fast Snapshot Restore is expensive.
 - Provisioned in GBs and IOPS (and billed by provisioned capacity, which can increase over time).
 - May be "delete-on-termination" (default for root volumes)
 - Multi-attach is beyond the scope of this class.
+- Volume Types -- (Most have 0.1% - 0.2% annual failure rate)
+  - gp2/gp3 (SSD) (eligible as a boot volume)
+    - gp2 1GiB to 16TiB; 3 IOPS/GiB
+    - gp3 3k IOPS to 16k IOPS; 125 MiB/s to 1000 MiB/s (independently)
+  - io1/io2 (high-performance SSD) -- low-latency and/or high-throughput (eligible as a boot volume)
+    - Up to 32k IOPS (and 64k for Nitro EC2)
+    - io2 has better durability (0.001% annual failure) and higher IOPS/GiB
+    - "io2 Block Express" has latency <1ms, and up to 256k IOPS.
+    - Supports EBS Multi-attach (in same AZ)
+      - Up to 16 R/W attachments, e.g. Teradata, but only with cluster-aware filesystem (e.g. Elastic File System) -- not XFS, EXT4, etc.
+  - st1 (HDD) -- low-cost throughput-intensive
+    - Max 500 IOPS, 500 MiB/s -- data warehouses, log processing
+  - sc1 (HDD) -- "cold" lowest-cost less-frequently accessed
+    - Max 250 IOPS, 250 MiB/s -- data warehouses, log processing
+
+### Amazon Machine Image
+
+### EC2 Instance Store
+
+- Ephemeral data store physically connected to the EC2 instance.
+
+### Elastic File System -- EFS
+
+- Only for Linux instances.
+- POSIX-compatible managed NFSv4.1, surrounded by a Security Group
+  - Scales automatically to PiB, supports 1000s of concurrent NFS clients, >10GiB/s throughput
+- Available cross-AZ to Linux instances (not Windows)
+- 3x cost of gp2 (but EFS-IA is available) -- pay-per-use
+  - content management, web serving, data sharing, Wordpress, etc.
+- Optional KMS encryption-at-rest
+- Performance Modes (not for Elastic)
+  - General purpose (default)
+  - Max I/O -- for highly-parallel work (higher throughput but higher latency)
+- Throughput can be:
+  - Bursting
+  - Provisioned (but throughput bill can be big bucks)
+  - Elastic (Recommended) up to 3GiB/s read and 1GiB/s write
+- Storage classes
+  - Standard
+  - Infrequent Access (EFS-IA) -- can be moved to this tier after N (7/14/30/60/90) days without being accessed and then automatically returned to Standard upon access.
+- Availability/Durability
+  - Standard (a/k/a Regional) -- Multi-AZ (for prod)
+  - Single-AZ (backup enabled by default). Also EFS One Zone-IA is 90% cost savings.
+- Automatic backups are extra.
+
+### Network access to EFS File Systems
+
+- Recommendation: one mount target per AZ, each controlled by its own Security Group
+- File System Policies
+  - May protect against root access.
+  - May be readonly.
+  - May prevent anonymous access.
+  - May require in-flight encryption.
+- Typically mounted to `/mnt/efs/fs1` (not for `/`)
+- Typically requires `yum install efs-utils` (at least behind-the-scenes)
+
+## Scalability and High Availability
+
+- Vertical vs horizontal scaling.
