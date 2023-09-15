@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "AWSALB",
+        "AWSALBAPP",
+        "AWSALBTG",
         "Duplicative",
         "Gbps",
+        "GENEVE",
         "Idempotency",
         "Journaling",
         "mindmap",
@@ -9,6 +13,7 @@
         "OIDC",
         "POSIX",
         "powerpoints",
+        "Proto",
         "slidev",
         "snapshotting",
         "Teradata",
