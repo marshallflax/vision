@@ -333,8 +333,27 @@
   - Supported by ALB, NLB, CloudFront -- not Classic LB
 - De-registration Delay (a/k/a Connection Draining) -- 300s (1s-3600s)
 
-### Auto Scaling Group
+### Auto Scaling Group (ASG)
 
-- Horizontal EC2 scaling
+- Horizontal EC2 scaling ("scale-out" and "scale-in")
   - Integrated with AWS load balancers, which can restart unhealthy instances
 - Launch Template
+  - AMI
+  - EC2 User Data (script)
+  - EBS Volumes
+  - Security Groups
+  - SSH Keys
+  - IAM Roles
+  - Network and subnets
+  - Load Balancer
+  - Min/Max/Initial Size
+  - Dynamic Scaling policies (with CloudWatch)
+    - Average CPU across all instances in group, custom metric, etc.
+      - Target Tracking Scaling
+      - CloudWatch, e.g. "add two units if CPU > 70%"
+    - Metrics
+      - `CPUUtilization`, `RequestCountPerTarget`, Average Network In (or Out)
+  - Predictive Scaling (based on _predicted_ metrics)
+  - Scheduled Actions (based on known or expected usage patterns)
+  - (Capacity Optimized allocation might help with Spot instances.)
+  - Cooldown after scaling (default 300s)
