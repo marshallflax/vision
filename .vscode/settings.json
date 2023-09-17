@@ -1,5 +1,8 @@
 {
     "cSpell.words": [
+        "allkeys",
+        "autofailover",
+        "autoscaled",
         "AWSALB",
         "AWSALBAPP",
         "AWSALBTG",
@@ -9,12 +12,14 @@
         "GENEVE",
         "Idempotency",
         "Journaling",
+        "keyspaces",
         "mindmap",
         "mindmaps",
         "OIDC",
         "POSIX",
         "powerpoints",
         "Proto",
+        "Sharded",
         "slidev",
         "snapshotting",
         "Teradata",

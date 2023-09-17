@@ -357,3 +357,77 @@
   - Scheduled Actions (based on known or expected usage patterns)
   - (Capacity Optimized allocation might help with Spot instances.)
   - Cooldown after scaling (default 300s)
+  - Supports "Instance Refresh" for transition (with minimum healthy percentage and warmup time) to updated launch template.
+
+## Amazon Relational Database Service (RDS)
+
+- Managed: Postgres, MySQL, MariaDB, Oracle, Microsoft SQL Server, Aurora (AWS proprietary)
+- Auto-provisioned, patched, Point-in-time restore, monitoring, read replicas, Multi-AZ, maintenance windows
+- Horizontal and vertical scaling, backed by EBS (gp2 or io1)
+- Can be configured to have connectivity to an EC2 "compute resource" and/or EV2 instances
+- Authentication can require IAM or Kerberos
+- Logs can be exported into CloudWatch
+
+### RDS Autoscaling
+
+- Storage
+  - Maximum Storage Threshold
+- Increase storage if free space is <10% over >5min and >6h since last increase.
+
+### RDS Read Replicas
+
+- Up to 15 replicas (in any AZ or region -- but pay for cross-region network)
+- Async replica, so eventual consistency
+- Replicas can be promoted to standalone r/w db instances.
+
+### RDS Multi-AZ for DR
+
+- Behind a single DNS alias for availability -- synchronous replication.
+- Not for read replicas, though a single instance can be both ("Multi-AZ Cluster")
+- No downtime necessary to promote DB to multi-AZ
+
+### RDS Aurora
+
+- API-compatible with Postgres (3x improvement) or MySQL (5x improvement)
+- Storage grows in 10GiB increments up to 128TiB
+- <10ms replica lag for up to 15 replicas (autoscaled!) via a Reader Endpoint.
+- <30s master failover (DNS) -- Writer Endpoint
+- 6 copies across 3AZ; 4 copies needed for writes, 3 for reads
+  - Striped across 100s of volumes
+- Support for Cross-Region Replication
+- Optional ("Backtrack") Point-in-time restores without backups
+- CloudWatch: audit, error, general, slow query
+
+### RDS/Aurora security
+
+- Encryption-at-rest using AWS KSM at initial launch (or snapshot-and-restore)
+- In-flight encryption -- supports AWS TLS root certs
+- IAM authentication or username/password
+- No SSH except RDS custom.
+- Audit logs may be sent to CloudWatch Logs (longer retention)
+
+### RDS Proxy
+
+- Only VPC connections
+- Serverless, autoscaling, HA, faster failover
+- Connection pooling, especially for Lambda functions
+- Allows non-Aurora instances to require IAM authentication
+
+### Amazon Elastic Cache
+
+- Managed Redis or Memcached
+- Can be on-premise (using AWS Outposts)
+- Requires application code (and especially an invalidation strategy)
+- Redis
+  - Multi AZ, autofailover, read replicas, durability (using append-only files), Sets and Sorted Sets.
+- Memcached
+  - Sharded, no replication, no persistence, no backup/restore
+- <https://aws.amazon.com/caching/best-practices/>
+  - Lazy Loading (a/k/a Cache-Aside, Lazy Population)
+  - Write-through (for smaller keyspaces)
+  - Russian-doll
+  - Eviction Strategies
+    - allkeys-{lfu,lru,random} (Least Frequently Used, Least Recently Used)
+    - volatile-{lfr,lru,ttl,random}
+    - no-eviction
+  - Thundering herd
