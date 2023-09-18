@@ -670,6 +670,12 @@
 - Only root account can enable/disable
 - Only for versioned buckets
 
+### S3 Access Logs
+
+- All requests -- both authorized or denied
+- Logged to a 2nd (to avoid infinite loops) S3 bucket in same region
+  - BucketOwner, Bucket, Time, IP, Requestor, RequestID, Operation (SOAP.op, REST.method.resource_type, WEBSITE.method.resource_type, BATCH.DELETE.OBJECT, S3.action.resource_type), Key (object name), RequestURI, HTTPStatus, S3ErrorCode, BytesSent, ObjectSize, TotalTime, S3Time, Referrer, UserAgent, VersionId, HostId, SignatureVersion, CipherSuite, AuthType, HostHeader, TLSVersion, AccessPointARN, AclRequired
+
 ### CORS (browser-based) and CSRF (server-based)
 
 - "Origin" -- protocol + domain + port
