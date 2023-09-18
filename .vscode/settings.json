@@ -6,6 +6,7 @@
         "AWSALB",
         "AWSALBAPP",
         "AWSALBTG",
+        "boto",
         "Cooldown",
         "DSSE",
         "Duplicative",

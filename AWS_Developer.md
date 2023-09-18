@@ -1,6 +1,6 @@
 # AWS Developer (Associate, DBA-C02)
 
-## Knowledge
+## Overview
 
 - Develop Using
   - Service APIs
@@ -11,9 +11,9 @@
 
 ---
 
-## Domain 1 -- Development
+### Domain 1 -- Development
 
-### Task 1 -- Application code
+#### Task 1 -- Application code
 
 - Patterns
   - Microservices vs monolithic, Fan-out, Idempotency, stateful, stateless, loose coupling
@@ -24,13 +24,13 @@
 - Serverless Application Model (AWS SAM) unit testing
 - Messaging, APIs, SDKs
 
-### Task 2 -- Lambda code
+#### Task 2 -- Lambda code
 
 - Testing, Event source mapping, event-driven architectures, scalability, stateless apps, unit testing, VPC private resources
 - Lambda function configuration via parameters/environment variables -- memory, concurrency, timeout, runtime, handler, layers, extensions, triggers, destinations, tuning.
 - Integration with services, destinations, DLQ
 
-### Task 3 -- Data stores
+#### Task 3 -- Data stores
 
 - SQL and NoSQL, CRUD, ephemeral vs persistent
 - Keys -- partition, DynamoDB
@@ -44,22 +44,22 @@
 
 ---
 
-## Domain 2 -- Security
+### Domain 2 -- Security
 
-### Task 1 -- Authentication and Authorization
+#### Task 1 -- Authentication and Authorization
 
 - Federated -- Security Assertion Markup (SAML), OpenID Connect (OIDC), Amazon Cognito
 - Tokens -- JSON Web Token (JWT), OAuth, AWS Security Token Service (STS)
 - Cognito -- user pools and identity pools
 - Policies -- resource, service, principal, Role-based access control (RBAC), ACL, least privilege, customer vs AWS managed
 
-### Task 2 -- Encryption at rest and in transit
+#### Task 2 -- Encryption at rest and in transit
 
 - Certificates -- AWS Private Cert Authority
 - Key Management -- rotation, AWS-managed, customer-management
 - SSH keys
 
-### Task 3 -- Sensitive data
+#### Task 3 -- Sensitive data
 
 - Classification -- PII, PHI
 - Env variables
@@ -69,9 +69,9 @@
 
 ---
 
-## Domain 3 -- Deployment
+### Domain 3 -- Deployment
 
-### Task 1 -- Artifacts
+#### Task 1 -- Artifacts
 
 - Configuration data -- AWS AppConfig, Secrets Manager, Parameter Store
   - Dependencies -- container images, config files, env variables
@@ -80,14 +80,14 @@
 - Git -- AWS CodeCommit
 - Container Images
 
-### Task 2 -- Dev environments
+#### Task 2 -- Dev environments
 
 - Application deployment
 - Mock endpoints
 - Lambda aliases, development endpoints
 - Deploying to existing environments
 
-### Task 3 -- Automated deployment testing
+#### Task 3 -- Automated deployment testing
 
 - API Gateway states
 - CI/CD branches and actions
@@ -97,7 +97,7 @@
 - Infrastructure as Code (IaC) -- SAM templates, CloudFormation templates
 - API Gateway environments
 
-### Task 4 -- Code deployment
+#### Task 4 -- Code deployment
 
 - Git, AWS CodeCommit, labels and branches
 - AWS CodePipeline workflow and approvals
@@ -108,32 +108,32 @@
 
 ---
 
-## Domain 4 -- Troubleshooting and Optimization
+### Domain 4 -- Troubleshooting and Optimization
 
-### Task 1 -- Root Cause
+#### Task 1 -- Root Cause
 
 - Logging and monitoring -- CloudWatch Logs Insights, CloudWatch Embedded Metric Format (EMF)
 - Visualizations, AWS X-Ray
 - Code analysis tools
 - HTTP codes, Common SDK exceptions
 
-### Task 2 -- Instrumentation
+#### Task 2 -- Instrumentation
 
 - Structured logging, distributed tracing (and annotations)
 - Logging, monitoring, observability
 - Application metrics -- custom, embedded, builtin
 - Notification alerts (e.g. quota, or deployment completion)
 
-### Task 3 -- Optimization
+#### Task 3 -- Optimization
 
 - Caching (using request headers), concurrency, messaging (Simple Queue Service, Simple Notification Service, filtering)
 - Profiling -- determining memory and compute requirements
 
 ---
 
-## Scope
+### Scope
 
-### Features in scope
+#### Features in scope
 
 - Analytics -- Athena, Kinesis, OpenSearch
 - App Integration -- AppSync, EventBridge, Simple Notification Service, Simple Queue Service, Step Functions
@@ -146,7 +146,7 @@
 - Security/Identity/Compliance -- Certificate manager (ACM), Cognito, IAM, Key Management Service (KMS), Private Cert Authority, Secrets Manager, Security Token Service (STS), WAF
 - Storage -- Elastic Block Store (EBS), Elastic File System (EFS), S3, S3 Glacier
 
-### Features out of scope
+#### Features out of scope
 
 - Analytics -- QuickSight
 - Business -- Chime, Connect, WorkMail
@@ -176,11 +176,60 @@
 - User-level IAM Access Advisor
 - Responsibility shared between AWS and account owner
 
-### SDK
+### API/SDK
 
-- JS, Python, PHP, .NET, Ruby, Java, Go, Node.js, C++
-- Mobile -- Android, iOS
-- IoT -- Arduino, Embedded C, ...
+- Many SDKs
+  - JS, Python, PHP, .NET, Ruby, Java, Go, Node.js, C++
+  - Mobile -- Android, iOS
+  - IoT -- Arduino, Embedded C, ...
+- Official CLI uses Python (boto)
+- SDK defaults to `us-east-1`
+
+### CLI Notes
+
+- `aws configure --profile newProfile`
+  - `aws s3 ls` vs `aws s3 ls --profile newProfile`
+- MFA Requires `aws sts get-session-token --serial-number mfa-device-arn --token-code current-code-from-token --duration-seconds 3600` ... then copy results into an `aws configure --profile myMFA` -- and then in `.aws/credentials` add an `aws_session_token` line to the `myMFA` stanza
+- Credentials Provider Chain, in decreasing priority
+  - `--region`, `--output`, `--profile`
+  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`, `$AWS_SESSION_TOKEN`
+  - `~/.aws/credentials`
+  - `~/.aws/config`
+  - Container credentials (for ECS tasks)
+  - Instance profile credentials (for EC2)
+- SDK (e.g. Java)
+  - Java system properties -- `aws.accessKeyId` and `aws.secretKey`
+  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`
+  - `~/.aws/credentials`
+  - `~/.aws/config`
+  - Container credentials (for ECS tasks)
+  - Instance profile credentials (for EC2)
+- Best practices
+  - EC2 Instance Roles for EC2 instances
+  - ECS Roles for ECS tasks
+  - Lambda Roles for Lambda functions
+  - Environment variables or named-profiles when working outside of AWS
+
+### AWS Limits (Quotas)
+
+- API Rate Limits
+  - EC2.DescribeInstances -- 100/s
+  - S3.GetObject -- 5500 GET/s per prefix
+  - Exponential Backoff is your friend when you receive a `ThrottlingException` or 5xx
+    - (Built into the SDK)
+  - Quota increases can be requested
+- Service Limits
+  - 1152 vCPU on-demand standard instances
+  - Open a ticket
+- Service Quotas
+  - Use the Service Quotas API
+
+### Signing AWS requests
+
+- SDK and CLI do this for you; some public S3 requests don't need to be signed
+- SigV4 (Signature v4)
+  - Can be provided in `-H Authorization:`
+  - Can be query string (pre-signed URL, good for up to 12h (S3 console) or 7d (CLI)) -- `X-Amz-Security-Token`, `X-Amz-Algorithm`, `X-Amz-Credential`, `X-Amz-Date`, `X-Amz-Signature`, and `X-Amz-Expires`
 
 ## EC2 -- Elastic Compute Cloud
 
@@ -213,7 +262,7 @@
 
 ---
 
-## Storage
+## Block Storage
 
 ### Elastic Block Storage (EBS) Volume
 
@@ -693,54 +742,3 @@
   - `curl http://169.254.169.254/latest/meta-data/identity-credentials/ec2/security-credentials/$IAM_ROLE`
   - returns a JSON document with type "AWS-HMAC" and a SecretAccessKey and Token
 - Userdata script is similarly available
-
-### CLI Notes
-
-- `aws configure --profile newProfile`
-  - `aws s3 ls` vs `aws s3 ls --profile newProfile`
-- MFA Requires `aws sts get-session-token --serial-number mfa-device-arn --token-code current-code-from-token --duration-seconds 3600` ... then copy results into an `aws configure --profile myMFA` -- and then in `.aws/credentials` add an `aws_session_token` line to the `myMFA` stanza
-- Credentials Provider Chain, in decreasing priority
-  - `--region`, `--output`, `--profile`
-  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`, `$AWS_SESSION_TOKEN`
-  - `~/.aws/credentials`
-  - `~/.aws/config`
-  - Container credentials (for ECS tasks)
-  - Instance profile credentials (for EC2)
-- SDK (e.g. Java)
-  - Java system properties -- `aws.accessKeyId` and `aws.secretKey`
-  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`
-  - `~/.aws/credentials`
-  - `~/.aws/config`
-  - Container credentials (for ECS tasks)
-  - Instance profile credentials (for EC2)
-- Best practices
-  - EC2 Instance Roles for EC2 instances
-  - ECS Roles for ECS tasks
-  - Lambda Roles for Lambda functions
-  - Environment variables or named-profiles when working outside of AWS
-
-## AWS SDK
-
-- Official CLI uses Python (boto)
-- SDK defaults to `us-east-1`
-
-## AWS Limits (Quotas)
-
-- API Rate Limits
-  - EC2.DescribeInstances -- 100/s
-  - S3.GetObject -- 5500 GET/s per prefix
-  - Exponential Backoff is your friend when you receive a `ThrottlingException` or 5xx
-    - (Built into the SDK)
-  - Quota increases can be requested
-- Service Limits
-  - 1152 vCPU on-demand standard instances
-  - Open a ticket
-- Service Quotas
-  - Use the Service Quotas API
-
-## Signing AWS requests
-
-- SDK and CLI do this for you; some public S3 requests don't need to be signed
-- SigV4 (Signature v4)
-  - Can be provided in `-H Authorization:`
-  - Can be query string (e.g. GET) -- `X-Amz-Security-Token`, `X-Amz-Algorithm`, `X-Amz-Credential`, `X-Amz-Date`, `X-Amz-Signature`, and `X-Amz-Expires`
