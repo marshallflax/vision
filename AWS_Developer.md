@@ -646,6 +646,37 @@
   - Analytics
 - Filtering not possible for either metadata or tags
 
+### S3 Object Encryption
+
+- In transit
+  - Use https, duhA
+  - Can be enforced by Denying traffic with `aws:SecureTransport` of `false`
+- Server-Side Encryption
+  - (Default) SSE-S3 -- Keys managed by S3
+    - Requires `x-amz-server-side-encryption: AES256`
+  - SSE-KMS -- Keys stored in KMS
+    - Requires `x-amz-server-side-encryption: aws:kms`
+    - Beware of KMS quotas (5.5k/10k/30k per sec depending on region)
+    - Allows auditing using CloudTrail
+    - "Bucket Keys" reduce KMS calls
+  - DSSE-KMS -- double encryption
+  - SSE-C -- Keys provided by customer
+    - Encryption key passed in every https header
+    - https of course mandatory
+- Client-Side
+
+### S3 MFA Delete
+
+- Only root account can enable/disable
+- Only for versioned buckets
+
+### CORS (browser-based) and CSRF (server-based)
+
+- "Origin" -- protocol + domain + port
+- Browser blocks traffic to second site unless second site has a matching Access-Control-Allow-Origin response to a preflight request
+- Remember: S3's API is mostly just GET
+- CORS Policy -- JSON document with Allowed{Headers,Methods,Origins} and MaxAgeSeconds
+
 ## EC2 Instance Metadata Service -- IMDS
 
 - IMDSv1 -- <http://169.254.169.254/latest/meta-data>
