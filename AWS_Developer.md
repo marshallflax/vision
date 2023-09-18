@@ -578,3 +578,132 @@
   - Current versions; current versions; deleted noncurrent versions; incomplete multipart uploads
 - (Per-byte and per-object) cost for transitioning to Glacier Flexible or Glacier Deep
 - Q: Are lifecycle rules just JSON?
+
+### S3 Moving between Storage Classes
+
+- Transition to lower classes some number of days after creation
+  - Separate rules for current and noncurrent versions
+- Expiration policies to delete objects
+  - Days after creation
+  - Old versions
+  - Incomplete multi-part uploads
+  - Can filter by prefix and/or tags
+- Examples
+  - Transition non-current versions to Standard IA and then Glacier Deep Archive
+- Storage Class Analysis
+  - Available only for Standard and Standard IA (not single-AZ or Glacier)
+  - Updated daily, with 24h-48h lag
+
+### S3 Event Notification
+
+- s3:TestEvent, s3:ObjectCreated:{Put,Post,Copy,CompleteMultipartUpload}, s3:ObjectRemoved:{Delete,DeleteMarkerCreated}, s3:ObjectRestore, s3:Replication...
+  - May be filtered by object name
+- Sent to SNS, SQS, or Lambda
+  - Typically O(seconds) but could be minutes or longer
+- SNS/SQS (Simple Notification/Queue Service)
+  - SNS/SQS Resource Policy (giving s3.amazonaws.com right to `SNS:Publish`/`SQS:SendMessage` to a given topic/queue from an `aws:SourceArn` of the relevant bucket)
+- Lambda
+  - Lambda Resource Policy (giving s3.amazonaws.com right to "lambda:InvokeFunction" to a given function from an `aws:SourceArn` of the relevant bucket)
+- Or via Amazon EventBridge
+  - Allows filtering by metadata, object size, name
+  - Multiple destinations
+    - Step Functions
+    - Kinesis Streams/Firehose
+    - etc
+  - Allows: Archive, Replay, Reliable delivery
+
+### S3 Baseline Performance
+
+- Typical latency is 100ms-200ms latency
+- Typical rate is 3.5k/s PUT/COPY/POST/DELETE or 5.5k/s GET/HEAD per prefix
+- Many prefixes per bucket
+- Multipart uploads can be parallelized
+  - Suggested >100MB, required >5GB
+
+### S3 Transfer Acceleration
+
+- Compatible with multi-part upload
+- Cache in edge location
+
+### S3 Byte-Range Fetches
+
+- Parallelizable
+- Only part of the file
+
+### S3 Select and Glacier Select
+
+- Server-side filtering using SQL!
+- Input in CSV or JSON (optionally gzip or bzip2), or Apache Parquet
+- Output in CSV or JSON
+- Server-side encrypted objects
+
+### S3 User-Defined Object Metadata + Object Tags
+
+- Metadata
+  - `Content-Length`, `Content-Type`, and user Metadata names `x-amz-meta-`
+- Object Tags
+  - Fine-grained permissions
+  - Analytics
+- Filtering not possible for either metadata or tags
+
+## EC2 Instance Metadata Service -- IMDS
+
+- IMDSv1 -- <http://169.254.169.254/latest/meta-data>
+- IMDSv2 (EC2 instances can be configured to require this)
+  - ``TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` ``
+  - `curl http://169.254.169.254/latest/meta-data/profile -H "X-aws-ec2-metadata-token: $TOKEN"`
+- IAM Role name is available, but not the actual policy
+  - `curl http://169.254.169.254/latest/meta-data/identity-credentials/ec2/security-credentials/$IAM_ROLE`
+  - returns a JSON document with type "AWS-HMAC" and a SecretAccessKey and Token
+- Userdata script is similarly available
+
+### CLI Notes
+
+- `aws configure --profile newProfile`
+  - `aws s3 ls` vs `aws s3 ls --profile newProfile`
+- MFA Requires `aws sts get-session-token --serial-number mfa-device-arn --token-code current-code-from-token --duration-seconds 3600` ... then copy results into an `aws configure --profile myMFA` -- and then in `.aws/credentials` add an `aws_session_token` line to the `myMFA` stanza
+- Credentials Provider Chain, in decreasing priority
+  - `--region`, `--output`, `--profile`
+  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`, `$AWS_SESSION_TOKEN`
+  - `~/.aws/credentials`
+  - `~/.aws/config`
+  - Container credentials (for ECS tasks)
+  - Instance profile credentials (for EC2)
+- SDK (e.g. Java)
+  - Java system properties -- `aws.accessKeyId` and `aws.secretKey`
+  - `$AWS_ACCESS_KEY_ID`, `$AWS_SECRET_ACCESS_KEY`
+  - `~/.aws/credentials`
+  - `~/.aws/config`
+  - Container credentials (for ECS tasks)
+  - Instance profile credentials (for EC2)
+- Best practices
+  - EC2 Instance Roles for EC2 instances
+  - ECS Roles for ECS tasks
+  - Lambda Roles for Lambda functions
+  - Environment variables or named-profiles when working outside of AWS
+
+## AWS SDK
+
+- Official CLI uses Python (boto)
+- SDK defaults to `us-east-1`
+
+## AWS Limits (Quotas)
+
+- API Rate Limits
+  - EC2.DescribeInstances -- 100/s
+  - S3.GetObject -- 5500 GET/s per prefix
+  - Exponential Backoff is your friend when you receive a `ThrottlingException` or 5xx
+    - (Built into the SDK)
+  - Quota increases can be requested
+- Service Limits
+  - 1152 vCPU on-demand standard instances
+  - Open a ticket
+- Service Quotas
+  - Use the Service Quotas API
+
+## Signing AWS requests
+
+- SDK and CLI do this for you; some public S3 requests don't need to be signed
+- SigV4 (Signature v4)
+  - Can be provided in `-H Authorization:`
+  - Can be query string (e.g. GET) -- `X-Amz-Security-Token`, `X-Amz-Algorithm`, `X-Amz-Credential`, `X-Amz-Date`, `X-Amz-Signature`, and `X-Amz-Expires`

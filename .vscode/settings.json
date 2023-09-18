@@ -12,6 +12,7 @@
         "GENEVE",
         "HEALTHCHECKS",
         "Idempotency",
+        "IMDS",
         "Journaling",
         "keyspaces",
         "mindmap",
@@ -28,6 +29,7 @@
         "Teradata",
         "themself",
         "transformative",
+        "Userdata",
         "Voronoi",
         "xlarge"
     ]
