@@ -10,11 +10,14 @@
         "Duplicative",
         "Gbps",
         "GENEVE",
+        "HEALTHCHECKS",
         "Idempotency",
         "Journaling",
         "keyspaces",
         "mindmap",
         "mindmaps",
+        "NACL",
+        "NAPTR",
         "OIDC",
         "POSIX",
         "powerpoints",
@@ -25,6 +28,7 @@
         "Teradata",
         "themself",
         "transformative",
+        "Voronoi",
         "xlarge"
     ]
 }

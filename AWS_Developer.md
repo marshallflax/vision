@@ -419,7 +419,8 @@
 - Can be on-premise (using AWS Outposts)
 - Requires application code (and especially an invalidation strategy)
 - Redis
-  - Multi AZ, autofailover, read replicas, durability (using append-only files), Sets and Sorted Sets.
+  - Multi AZ transactional log, autofailover, read replicas (up to 5), durability (using append-only files), Sets and Sorted Sets.
+  - 10's of GiB to 100's of TiB
 - Memcached
   - Sharded, no replication, no persistence, no backup/restore
 - <https://aws.amazon.com/caching/best-practices/>
@@ -431,3 +432,149 @@
     - volatile-{lfr,lru,ttl,random}
     - no-eviction
   - Thundering herd
+
+## Route 53 (DNS)
+
+- A, AAAA, CNAME (not for Zone Apex), NS
+- CAA, DS, MX, NAPTR, PTR, SOA, TXT, SPF, SRV
+- Zone File, Name Serve, TLD, SLD (second-level domain), FQDN, protocol, URL
+- Route 53 as authoritative DNS
+- Hosted Zones (public or private, within VPC), 0.50 USD/month per hosted zone
+- Aliases records (free) for ELB, CloudFront, API Gateway, Elastic Beanstalk, S3, VPC Interface Endpoints, Global Accelerator, Route 53 in same zone -- but not EC2
+- Routing policies
+  - Simple (no health checks)
+  - Weighted (proportional, useful for canarying)
+  - Latency (network latency)
+  - Failover (active/passive)
+  - Geo-location
+  - Multi-value (up to 8 healthy records returned) -- "not a substitute for ELB"
+  - IP-based (CIDR)
+  - Geo-proximity (positive bias increases Voronoi region size; -99 to +99)
+  - May be nested (e.g. multiple failover strategies, each with a different weight)
+- Health checks
+  - Endpoints (apps, servers, AWS resources)
+    - Interval 30s (10s more expensive)
+    - HTTP, HTTPS, TCP
+    - At least 18% must be healthy
+    - Threshold of 3 (default)
+    - 2xx, 3xx, or based on text in the first 5k of the response.
+    - Must allow Route53 Health Checkers access to endpoints -- <https://ip-ranges.amazonaws.com/ip-ranges.json> (ROUTE53_HEALTHCHECKS)
+  - Calculated
+    - Based on up to 256 child checks
+  - CloudWatch Alarms
+    - Necessary for endpoints only accessible from VPC
+
+## Virtual Private Cloud (VPC)
+
+- VPC (per Region), Subnet (per AZ) (public or private), Internet Gateway (used by public-subnet resources)
+  - Private subnets: NAT Gateway (AWS-managed) and NAT Instances (user-managed) -- both reside in public subnet
+- Security Groups
+  - Stateful -- always allows return traffic
+  - ALLOW rules only based on both IP addresses and security groups
+  - Elastic Network Interface and EC2 instances
+- Network ACL (NACL)
+  - Stateless
+  - ALLOW and DENY rules based only on IP addresses
+  - Everything in the subnet
+- VPC Flow Logs, Subnet Flow Logs, Elastic Network Interface Flow Logs
+  - Also Managed resources: ELB, ElastiCache, RDS, etc.
+  - Can be stored in S3, CloudWatch Logs, Kinesis Data Firehose
+- VPC Peering
+  - Cross-account and/or cross-region
+  - CIDR must not overlap
+  - Peering is not transitive, so $O(n^2)$
+- Private access to AWS services: VPC Endpoint Gateway (S3 and DynamoDB) and VPC Endpoint Interface
+- Site-to-site VPN (over public internet), Direct Connect (DX) (takes >1 month to establish)
+
+### Typical 3-tier architecture
+
+- Tier 1 -- Public subnet -- ELB
+- Tier 2 -- Private subnet -- Autoscaling group with one subnet per AZ (Linux, Apache, PHP)
+- Tier 3 -- Data subnet -- EBS, EFS, ElastiCache, RDS (MySQL)
+
+## S3 (Simple Storage Service)
+
+- Infinitely-scaling storage and backbone
+- Backup, storage, DR, archive, Hybrid Cloud storage, App hosting, Media, Data lakes, Big Data, Software delivery, static websites
+- Objects in globally-uniquely-named buckets (created in a specific region)
+  - Bucket naming: no uppercase, no underscore, 3-63 chars, not an IP.
+  - Key is full path
+  - Objects <5000GB (but multi-part upload for >5GB) with metadata key/value pairs, up to ten unicode key/value tags, and perhaps version ID.
+
+### S3 Security
+
+- User-based (API calls per IAM user)
+  - DENY in IAM Policy trumps bucket policy
+- Resource-based
+  - Bucket-wide rules, even cross-account
+    - JSON-based
+    - List of Statements (Effect/Principal/Actions/Resources (e.g. `arn:aws:s3:::myBucket/*`))
+      - Effect: Allow or Deny
+      - Principal: IAM User or IAM Role (e.g. EC2 instances)
+      - Action, e.g. `s3:GetObject`, `s3:PutObject`
+      - Condition, e.g. `"Null"`, `"StringEquals"`, `"ArlLike"`, `"ForAllValues:StringNotEquals"` with parameters, `"s3:x-amz-server-side-encryption-aws-kms-key-id": "true"`, `"s3:x-amz-acl": ["public-read"]`, `"aws:SourceArn": "arn:aws:s3:::EXAMPLE-SOURCE-BUCKET"`, or `"aws:PrincipalServiceNamesList": "logging.s3.amazonaws.com"`
+    - Can mandate encryption
+    - Can be prevented from granting access to public, even for the entire account
+  - Object ACL
+  - Bucket ACL (uncommon)
+
+### S3 Versioning
+
+- Enabled at bucket level (even after bucket created)
+- Protects against unintended deletes, allows rollback to previous version (even if versioning is subsequently disabled)
+- Deleting an object actually adds a "delete marker" (visible when "show versions" is enabled)
+
+### S3 Replication
+
+- Asynchronous
+  - Requires versioning in source and destination; version IDs are replicated
+  - Chaining not allowed.
+  - Only objects created after replication enabled; S3 Batch Replication for existing objects.
+  - Deletion replication is optional; permanent deletions blocked
+- Same-region (SRR) and Cross-region (CRR)
+  - May apply to all objects in bucket, or whose which pas a filter
+  - Target can have different ownership, storage class, encryption, etc.
+  - RTC (Replication Time Control) does 99.99% within 15m -- but more USD
+  - Cloudwatch metrics available -- but more USD
+- S3 must be granted necessary IAM perms (usually to an auto-created IAM Role)
+- Q: Many-to-one???
+
+### S3 Storage classes (per Object)
+
+- Standard -- 99.99% availability
+- Standard IA (Infrequent Access) -- 99.9% availability
+  - Lower fixed cost, but cost-upon-retrieval
+- Single Zone Infrequent Access -- 99.5% availability
+  - Data lost if AZ destroyed
+- Glacier (minimum storage duration 90 days)
+  - Instant Retrieval -- millisecond retrieval for data used once / quarter
+  - Flexible Retrieval
+    - Expedited (1m - 5m)
+    - Standard (3h - 5h)
+    - Bulk (5h-12h)
+  - Deep Archive (minimum 180 days)
+    - Standard (12h)
+    - Bulk (48h)
+- Intelligent Tiering
+  - No retrieval charges, but does have monitoring and auto-tiering fees
+  - Frequent tier
+  - Infrequent tier after 30d
+  - Archive Instant after 90d
+  - Archive (optional) after 90+d
+  - Deep Archive (optional) after 180+d
+
+### S3 Durability
+
+- Multi-AZ and single-AZ: 11 9's.
+- Object Lock prevents deletion or overwriting; governance mode even blocks root user.
+
+### S3 Lifecycle rules
+
+- Parameters
+  - All objects or filtered
+  - All objects or specific tags
+  - All objects or minimum/maximum size
+  - Days after object creation
+  - Current versions; current versions; deleted noncurrent versions; incomplete multipart uploads
+- (Per-byte and per-object) cost for transitioning to Glacier Flexible or Glacier Deep
+- Q: Are lifecycle rules just JSON?
