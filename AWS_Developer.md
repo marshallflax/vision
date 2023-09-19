@@ -732,6 +732,17 @@
 - Remember: S3's API is mostly just GET
 - CORS Policy -- JSON document with Allowed{Headers,Methods,Origins} and MaxAgeSeconds
 
+### S3 Access Points
+
+- Permissioning for different prefixes
+- Each access point has a different DNS FQDN (public internet or VPC)
+- VPC
+  - VPC Endpoint needs to have s3:GetObject rights to both the bucket and the accesspoint
+
+### S3 Object Lambda
+
+- Useful for redaction, enriching, and/or watermarking
+
 ## EC2 Instance Metadata Service -- IMDS
 
 - IMDSv1 -- <http://169.254.169.254/latest/meta-data>
@@ -742,3 +753,71 @@
   - `curl http://169.254.169.254/latest/meta-data/identity-credentials/ec2/security-credentials/$IAM_ROLE`
   - returns a JSON document with type "AWS-HMAC" and a SecretAccessKey and Token
 - Userdata script is similarly available
+
+## CloudFront (CDN)
+
+- Hundreds of edge locations, TTL is about a day
+- Protection
+  - DDoS protection with Shield
+  - (Optional) Web Application Firewall (WAF)
+- Origins
+  - S3
+    - CloudFront Origin Access Control (OAC)
+      - (Replaces Origin Access Identity (OAI))
+    - Also for uploading
+  - HTTP
+    - ALB (Application Load Balancer)
+    - EC2 instance
+    - S3 static website
+- "Distribution" options
+  - Optionally compress all objects
+  - Supports
+    - http and https
+    - redirect http to https
+    - only https
+  - Methods
+    - Only GET,HEAD
+    - Only GET,HEAD,OPTIONS
+    - Only GET,HEAD,OPTIONS,PUT,POST,PATCH,DELETE
+  - Edge locations
+    - Everywhere
+    - North America, Europe, Asia, Middle East, Africa
+    - North America, Europe
+  - Logging to an S3 bucket
+
+### CloudFront Caching
+
+- CreateInvalidation API (all files or a path)
+- By default, query strings, http headers, and cookies are not part of the Cache Key
+  - But if they are part of the Cache Key then they are passed to the origin
+    - Or Origin Request Policy can define headers to pass to the origin even though it's not part of the Cache Key
+- CloudFront can only access public ALB or EC2 instances (not VPC)
+- CloudFront can exclude by country, etc.
+
+### CloudFront Signed URLs / Signed Cookies
+
+- Trusted signers (AWS accounts)
+- Cookies may be for many files
+- Two types of signers
+  - Trusted key group (recommended)A -- APIs to create and rotate keys
+    - Public Key uploaded to CloudFront to verify URLs
+    - Private key used by apps (e.g. on EC2) to sign URLs via the Platform API
+  - AWS Root Account with a CloudFront Key Pair (not recommended)
+
+### CloudFront Origin Groups
+
+- One primary and one secondary, with failover
+  - Perhaps S3 buckets in two different regions (with replication to the secondary)
+
+### CloudFront Field Level Encryption
+
+- Specific fields in POST requests can be encrypted with a public key.
+
+### CloudFront Logs
+
+- Requests sent to Kinesis Data Streams
+  - Thence to Lambda for real-time processing
+  - Thence to Kinesis Data Firehose for near-real-time processing
+- Can restrict to
+  - Sampling fraction
+  - Specified Cache Behaviors (path patterns) and/or field values
