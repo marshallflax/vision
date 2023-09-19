@@ -821,3 +821,188 @@
 - Can restrict to
   - Sampling fraction
   - Specified Cache Behaviors (path patterns) and/or field values
+
+## Containers
+
+### Docker
+
+- Can run inside EC2 instance with a Docker Daemon
+  - Limited isolation between containers on a host
+- Image repos
+  - Private
+    - Amazon Elastic Container Registry (ECR)
+  - Public
+    - <https://hub.docker.com>
+- Overview
+  - Create Dockerfile, e.g. `FROM ubuntu:18.04; COPY . /app; RUN make /app; CMD python3 /app/app.py`
+  - Build image and push to repo
+  - Pull-and-run
+- Services
+  - Elastic Container Registry (ECR) -- Docker images backed by S3
+    - Public <https://gallery.ecr.aws>
+    - Private
+      - EC2 instance role needs rights
+    - Also
+      - Vulnerability scanning
+      - Versioning, Tags, Lifecycle
+    - CLI
+      - `aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $AWS_ACCT_ID.dkr.ecr.$REGION.amazonaws.com`
+      - `docker push $AWS_ACCT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE:latest`
+  - Elastic Container Service (ECS) -- proprietary platform
+  - Elastic Kubernetes Service (EKS) -- managed Kubernetes
+  - AWS Fargate -- serverless container platform (for both ECS and EKS)
+
+### Elastic Container Service -- ECS
+
+- "Launch ECS Tasks on ECS Clusters"
+  - EC2 Launch Type -- Manual provision and maintain the EC2 instances, each running the ECS Agent (which registers the instance into the ECS Cluster)
+    - IAM Roles
+      - EC2 Instance Profile
+        - Used by ECS Agent to interact with ECS service, CloudWatchLogs, pull from ECR, and Secrets Manager and/or SSM Parameter Store
+      - ECS Task Role (per task)
+        - Defined in the task definition.
+    - A dedicated EC2 Auto Scaling Group
+      - EC2 instance type (e.g. t2.micro)
+      - OS/Arch (e.g. "Amazon Linux 2")
+      - Min/Max number of instances
+  - Fargate Launch Type -- Just create task definitions
+    - Also Fargate Spot
+  - ECS Anywhere
+    - Even on-premises
+- ALB (Application Load Balancer) supported
+  - NLB only for very high performance cases, or with AWS Private Link
+  - Classic Load Balancer not recommended and doesn't support Fargate
+- ECS tasks can mount EFS file systems (but not of course S3)
+  - Fargate + EFS is nice
+
+### ECS Tasks
+
+- Task Definition (for up to ten containers)
+  - IsEssential
+  - Image location
+  - Port Bindings (container and host) and networking info
+    - EC2
+      - Port 0 ==> Dynamic Host Port Mapping (which ALB is fine with -- but not Classic Load Balancer)
+        - EC2's Security Group must open all TCP ports
+    - Fargate
+      - Each task has a unique private IP
+      - The ECS ENI (Elastic Network Interface) Security Group just needs to open 80 (or whatever)
+  - Memory and CPU requirements
+  - IAM Role (per Task Definition)
+  - Environment variables
+    - Hardcoded
+    - SSM (Systems Manager) Parameter Store (e.g. API keys)
+    - Secrets Manager (e.g. DB passwords)
+    - From an S3 bucket ("bulk")
+  - Logging configuration
+    - CloudWatch
+    - AWSFireLens to Firehose/KinesisStream/OpenSearch/S3
+  - Trace Collection (via OpenTelemetry sidecar to AWS X-Ray)
+  - Metrics Collection (via OpenTelemetry sidecar to CloudWatch or Managed Prometheus (with either Prometheus or OpenTelemetry libraries))
+  - Data Volumes (bind mounts)
+    - Share data between containers ("sidecars", e.g. Metrics/Logging) defined in the same Task Definition
+    - Works for both EC2 and Fargate
+    - Location
+      - EC2 instance storage
+      - Fargate ephemeral storage (20GiB default, up to 200GiB)
+    - Q: So this is per-task and a task can contain multiple containers which scale together?
+- Can be linked to one or more Launch Types
+- Can be long-running "service" or a standalone "task" (e.g. a batch job)
+- Can be fronted by an ALB
+- Dedicated vCPU and RAM
+- IAM
+  - Create a Task role if the task will be using AWS services
+  - Create a security group for the ALB allowing connections from users
+  - Create a security group for the Tasks allowing traffic from the ALB security group
+
+### ECS Auto Scaling (task level)
+
+- Launch Types
+  - Fargate
+    - Easier!
+  - EC2
+    - Option: Auto Scaling Group Scaling -- adds EC2 instances over time
+    - Option: ECS Cluster Capacity Provider (paired with an Auto Scaling Group)
+- Uses AWS Application Auto Scaling
+  - Average CPU
+  - Memory utilization
+  - ALB Requests per Target
+- Target Tracking (CloudWatch metric)
+- Step Scaling (CloudWatch alarm)
+- Scheduled Scaling
+
+### ECS Rolling Updates
+
+- Min healthy percent (≤100%)
+- Maximum percent (≥100%)
+
+### ECS and Events
+
+- Event Bridge
+  - S3 Events can run ECS tasks which read S3 objects and write to DynamoDB
+  - Scheduled Events can run ECS tasks
+  - ECS task starts/stops are also events which can go via EventBridge to SNS (Simple Notification Service)
+- SQS Queue
+  - Tasks can poll an SQS Queue and ECS Service Auto Scaling can do its thing.
+
+### ECS Tasks Placement
+
+- Fargate doesn't need any of this nonsense.
+- Task placement strategy
+  - Binpack -- Greedy least available memory/CPU (to allow the fewest number of EC2 instances)
+  - Random -- Amongst eligible containers
+  - Spread -- Across AZ or instanceId.
+  - May be combined, e.g. SpreadByAZ-then-Binpack or SpreadByAZ-then-SpreadByEC2Instance
+- Task placement constraints
+  - `distinctInstance`
+  - `memberOf` (Cluster Query Language, e.g. `attribute:ecs.instance-type =~ t2.*`)
+- Placement is best-effort.
+
+### AWS Copilot
+
+- Install from <https://github.com/aws/copilot-cli/releases/latest/download>
+- CLI tool for AppRunner, ECS, or Fargate
+  - Handles VPC, ELB, ECR
+  - Integrates with CodePipeline
+- Deploys to multiple environments, can enable logs, health status, etc.
+  - Configures AWS using CloudFormation templates
+  - Creates `copilot/web-app/manifest.yml`
+- YAML-described microservices
+- `copilot init`
+  - Workload
+    - Request-driven (App Runner)
+    - Load Balanced (Fargate)
+    - Backend (Fargate)
+    - Worker (SQS to Fargate)
+    - Scheduled (Events to State Machine to Fargate)
+- `copilot env init`
+- `copilot deploy`
+- `copilot app delete`
+- Q: is there a "dry mode"?
+
+### Cloud 9
+
+- Requires `AWSServiceRoleForAWSCloud9`
+
+### Amazon Elastic Kubernetes Service (EKS)
+
+- Aso supports EC2 or Fargate
+- Node Types
+  - Managed Node Groups
+    - Nodes in an AutoScalingGroup managed by EKS
+    - Supports On-Demand or Spot instances
+  - Self-Managed nodes
+    - Manually-created nodes registered to EKS cluster (and managed by ASG)
+    - Manually-created AMI or Prebuilt Amazon EKS Optimized AMI
+    - Supports On-Demand or Spot instances
+  - AWS Fargate
+    - Fully managed
+- Data Volumes
+  - `StorageClass` manifest for EKS cluster
+  - Requires a Container Storage Interface (CSI) compliant driver
+    - Fargate and EC2
+      - EFS
+    - EC2 only
+      - EBS
+      - FSx for Lustre
+      - FSx for NetApp ONTAP
