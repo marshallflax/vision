@@ -1047,6 +1047,7 @@
       - (Granted `sts:AssumeRole` to the `ec2.amazonaws.com` service as a principal)
 - Application update strategies -- <https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html>
   - Note: applications are typically just `.zip` files
+  - Q: How does "Swap environment domain" work with persistent data?
   - All-at-once
   - Rolling
   - Rolling with additional batches
@@ -1063,4 +1064,44 @@
     - Can hit an endpoint periodically, for example
   - `.ebextensions/`
     - `logging.config` (yaml)
- 
+
+### EB CLI
+
+- `eb {create,status,health,events,logs,open,deploy,config,terminate}`
+- (For automated deployment pipelines)
+
+### EB Deployment Processes
+
+- Describe dependencies
+  - Python -- `requirements.txt`
+  - Node.js -- `package.json`
+    - Q: Shouldn't it really be `package-lock.json`???
+- Package as zip and deploy (via S3)
+- EB resolves dependencies
+
+### EB Lifecycle Policy
+
+- Stores up to 1000 versions
+  - Can keep in S3 even when evicted from EB
+    - `.elasticbeanstalk/`, `$ACCOUNT_ID-something.zip`, `resources/`
+- Can use same aws-elasticbeanstalk-service-role, etc
+
+### EB Extensions
+
+- YAML or JSON files in `.ebextensions/*.config`
+  - `option_settings:aws:elasticbeanstalk:application:environment.{DB_URL,DB_USER}`
+- Can add RDS, ElastiCache, DynamoDB, etc -- but they are deleted if the environment is deleted.
+  - Any CloudFormation-compliant resources
+  - But best practice is to decouple RDS DBs.
+  - Q: Is tombstoning required?
+
+### EB Cloning
+
+- Useful for creating a test version
+
+### EB Migration (Load Balancer)
+
+- Ugly
+- Create entirely new environment
+- Eventually need CNAME swap or Route 53 update.
+
