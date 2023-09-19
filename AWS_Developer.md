@@ -737,7 +737,7 @@
 - Permissioning for different prefixes
 - Each access point has a different DNS FQDN (public internet or VPC)
 - VPC
-  - VPC Endpoint needs to have s3:GetObject rights to both the bucket and the accesspoint
+  - VPC Endpoint needs to have s3:GetObject rights to both the bucket and the access point
 
 ### S3 Object Lambda
 
@@ -1006,3 +1006,61 @@
       - EBS
       - FSx for Lustre
       - FSx for NetApp ONTAP
+
+## Elastic Beanstalk
+
+- Uses:
+  - EC2 -- Scaled using ASG as usual
+  - EIP (Elastic IP) -- Finally exposes <http://myap-$env.$suffix.$AZ.elasticbeanstalk.com>
+  - ELB -- Either a dedicated instance or can share in an existing Load Balancer in your account
+  - RDS -- The lifecycle of any linked RDS instance is the lifetime of the environment
+- Manages: provisioning, load-balancing, scaling, health monitoring, instance configuration, etc
+  - (CloudFormation effects stacks which orchestrate creation of resources using templates)
+- Free, but you of course pay for everything you use
+- Terms
+  - "Application" -- EB components (environments, versions, configs, etc)
+  - "Application Version"
+  - "Environment"
+    - Collection of AWS resources running one version at a time
+    - Tiers
+    - Instances -- Dev, Test, Prod, etc.
+    - Modes -- Single-instance (for dev), HA with Load Balancer
+      - Also, whether to use spot instances
+  ```mermaid
+
+  graph LR
+  CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
+  ```
+- Platforms
+  - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
+  - Docker (Single Container, Multi-Container, Pre-configured)
+- Tiers
+  - Web Server Environment Tier
+    - ELB in from of Security Groups and EC2 instances in multiple AZ
+  - Worker Environment Tier
+    - EC2 instances pulling from an SQS queue
+    - Scale based on SQS message count
+    - Of course, Web Server Tier can publish to SQS queues
+- IAM
+  - EB itself uses an "aws-elasticbeanstalk-service-role", containing
+    - Set the EC2 instance profile to be a new "aws-elasticbeanstalk-ec2-role" containing: `AWSElasticBeanstalkWebTier`, `AWSElasticBeanstalkWorkerTier`, `AWSElasticBeanstalkMulticontainerDocker`
+      - (Granted `sts:AssumeRole` to the `ec2.amazonaws.com` service as a principal)
+- Application update strategies -- <https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html>
+  - Note: applications are typically just `.zip` files
+  - All-at-once
+  - Rolling
+  - Rolling with additional batches
+  - Immutable (new ASG, then swap)
+    - Q: Why does the slide call this the "Longest deployment"???
+  - Blue Green (entirely new environment, canaried and transitioned using Route53)
+  - Traffic Splitting (canary testing)
+    - One ALB, two ASG (equally-sized)
+    - Rapid automated rollback.
+- Configuration update strategies
+  - Beyond scope of test
+- Files
+  - `cron.yaml`
+    - Can hit an endpoint periodically, for example
+  - `.ebextensions/`
+    - `logging.config` (yaml)
+ 
