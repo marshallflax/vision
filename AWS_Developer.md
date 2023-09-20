@@ -1127,6 +1127,7 @@
     - Resources to be created or modified (over 200 types!) -- AWS::aws-product-name::data-type-name -- <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html>
       - Q: Update Udemy course to reflect new format?
     - Resources have `Type` and `Properties` and may reference each other. (No dynamic creation within the yaml itself.)
+    - Resources may also have a `Condition` contingent upon a previously-defined condition
   - Parameters (dynamic inputs)
     - Type -- String, Number, CommaDelimitedList, List`<Type>`, AWSParameter (match against existing values in account)
     - Description (boolean)
@@ -1138,8 +1139,15 @@
       - Eg `!FindInMap [RegionAndArchToImage, !Ref "AWS::Region", 32]`
         - Q: Update example to have better map name?
   - Outputs (optional references to created resources)
-    - Typical: VPC ID and Subnet IDs
-  - Conditionals (for resource creation)
+    - (used via `!ImportValue`
+    - Value (most likely a `!Ref`)
+    - Export.Name (public name) -- must be unique within region for your entire account
+    - (Typical use: VPC ID and Subnet IDs)
+    - NB: if outputs are used by another stack, that other stack must be deleted first
+  - Conditions (for resource creation)
+    - Examples: dev/test/prod, region, etc.
+    - `Conditions:CreateProdResources: !Equals [!Ref EnvType, "prod"]`
+      - `Fn::And`, `Fn::Equals`, `Fn::If` (ternary), `Fn::Not`, `Fn::Or`
   - Metadata
 - Template helpers
   - References
@@ -1166,3 +1174,46 @@
 - `|` -- multiline string
 - `#` -- comments
 - `!` -- tags
+
+### CloudFormation Intrinsic Functions
+
+- Q: Not "Intrisic"
+- `Fn::Ref` -- resources (physical ID) and parameters
+- `Fn::GetAtt`, e.g. `!GetAtt MyEC2Instance.AvailabilityZone`
+- `Fn::FindInMap`, e.g. `!FindInMap [RegionAndArchToImage, !Ref "AWS::Region", 32]`
+- `Fn::ImportValue`, e.g. `!ImportValue ExportedName`
+- `Fn::Join`, e.g. `!Join [":", [x,y,z]]` results in "x:y:z"
+- `Fn::Sub`, e.g. `!Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${vpc}'`
+  - (Also can supply specific mapping for local interpolations)
+- Condition functions: `Fn::And`, `Fn::Equals`, `Fn::If` (ternary), `Fn::Not`, `Fn::Or`
+
+### CloudFormation Rollbacks
+
+- Stack Creation error 
+  - Default is rollback, but can disable for troubleshooting
+
+- Stack Update error
+  - Default is rollback to last known-working state, but can allow newly-created resources to stay (for debugging)
+  - Logs are useful.
+
+### CloudFormation to SNS Topic
+
+- Once enabled, all events go to the topic (but can filter via Lambda to a 2nd topic)
+
+### CloudFormation -- advanced topics
+
+- ChangeSets -- Essentially `--dry_run`
+- Nested stacks (best practice)
+  - Component reuse
+  - Inner stack is essentially private
+- Cross stacks
+  - When resources have different life-cycles
+  - `Fn:ImportValue`
+  - E.g. passing export values to many stacks (e.g. VPC Id)
+- StackSets
+  - Across multiple accounts and/or regions
+- Drift
+  - Caused by manual changes
+  - Q: Can we periodically monitor all stacks for drift?
+- Stack policies
+  - Can protect resources (e.g. RDS) from updates, etc.

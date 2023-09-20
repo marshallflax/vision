@@ -21,6 +21,7 @@
         "HMAC",
         "Idempotency",
         "IMDS",
+        "Intrisic",
         "Journaling",
         "keyspaces",
         "mindmap",
