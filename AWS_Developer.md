@@ -1105,3 +1105,64 @@
 - Create entirely new environment
 - Eventually need CNAME swap or Route 53 update.
 
+## CloudFormation -- Infrastructure-as-code
+
+- Automated destruction and recreation of infrastructure
+- Automated diagrams
+- CloudFormation does ordering and orchestration
+- Separation of concerns
+  - VPC stacks
+  - Network stacks
+  - App stacks
+
+### CloudFormation Basics
+
+- Templates uploaded to S3 and never modified.
+- Stacks identified by name.
+- Deleting a stack deletes all artifacts created by CloudFormation.
+- Templates may be edited in CloudFormation Designer (and console to input parameters)
+- Templates are editable YAML files which may be deployed via AWS CLI.
+- Template Components
+  - AWS resources (MANDATORY)
+    - Resources to be created or modified (over 200 types!) -- AWS::aws-product-name::data-type-name -- <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html>
+      - Q: Update Udemy course to reflect new format?
+    - Resources have `Type` and `Properties` and may reference each other. (No dynamic creation within the yaml itself.)
+  - Parameters (dynamic inputs)
+    - Type -- String, Number, CommaDelimitedList, List`<Type>`, AWSParameter (match against existing values in account)
+    - Description (boolean)
+    - Constraints -- Min/MaxLength, Min/MaxValue, Defaults, AllowedValues (array), AllowedPattern (regexp), NoEcho (boolean)
+    - (used via `!Ref`)
+      - Also pseudo-parameters: `AWS::{AccountId,Region,StackId,StackName,NotificationARNs,NoValue}`
+  - Mappings (static configuration) A
+    - (used via `!FindInMap [ MapName, TopLevelKey, SecondLevelKey ]`)
+      - Eg `!FindInMap [RegionAndArchToImage, !Ref "AWS::Region", 32]`
+        - Q: Update example to have better map name?
+  - Outputs (optional references to created resources)
+    - Typical: VPC ID and Subnet IDs
+  - Conditionals (for resource creation)
+  - Metadata
+- Template helpers
+  - References
+  - Functions
+
+### CloudFormation Stacks
+
+- May import resources (beyond scope of exam!)
+- Templates may be uploaded or an existing S3 URL.
+- Out-of-scope for exam
+  - Stack policy (protecting against unintentional updates)
+  - Rollback configuration
+  - Notification options
+  - Stack creation options
+- Notes
+  - CF adds useful tags to generated resources, e.g. `aws:cloudformation:logical-id`, `aws:cloudformation:stack-id` (full arn), `aws:cloudformation:stack-name`
+  - CF shows "Change set preview"!
+    - Q: Why the hell doesn't it show the order in which the changes will occur???
+
+### YAML
+
+- `:` -- key/value
+- `-` -- list item
+- `|` -- multiline string
+- `#` -- comments
+- `!` -- tags
