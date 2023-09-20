@@ -1217,3 +1217,96 @@
   - Q: Can we periodically monitor all stacks for drift?
 - Stack policies
   - Can protect resources (e.g. RDS) from updates, etc.
+
+## Integration and Messaging
+
+- SQS (oldest AWS service -- queue), SNS (pub/sub), Kinesis (real-time streaming)
+
+### SQS -- Simple queueing service
+
+- Producers (calling SendMessage API) and Consumers (EC2 polling for up to 10 at a time, servers, Lambda)
+  - Delete-after-processing
+- Duration 4 days (max 14)
+- Latency < 10ms
+- Messages < 256KB, plus attributes
+- Types
+  - Standard Queue
+    - At least once delivery; best-effort ordering
+    - Unlimited throughput, unlimited message count
+  - FIFO
+    - Exactly-once
+    - (In-order for each message group ID)
+    - Queue Name must end with ".fifo"
+    - Throughput limited to 300msg/s without batching; 3000msgs/s with batching
+    - Deduplication based on de-dup ID or SHA-256
+- Configuration
+  - Visibility timeout (30s; 0-12h)
+    - Time to process
+    - Extend with `ChangeMessageVisibility`
+  - Delivery delay (0s; 0-15m)
+    - Also can be per-message
+  - Receive message wait time (0s; 0-20s) -- Long Polling!
+  - Message retention period (4d; 1m-14d)
+  - Max message size (256KB; 1KB-256KB)
+    - SQS Extended Client (Java) uses S3 as a workaround
+    - More generally, just send metadata around
+  - DLQ
+- Offers an `ApproximateNumberOfMessages` metric suitable for ASG scaling.
+  - Also ApproximateAgeOfOldestMessage, ApproximateNumberOfMessagesDelayed, ApproximateNumberOfMessagesNotVisible, ApproximateNumberOfMessagesVisible, ApproximateNumberOfEmptyReceives, NumberOfMessageDeletes, etc.
+- In-flight: https
+- At-rest: KMS
+- SQS Access policies (similar to S3 bucket policies)
+  - Cross-account access
+  - Delegating rights to services (SNS, S3, and basically everything else)
+  - Statement
+    - Effect (Allow/Deny)
+    - Principal (Accounts, IAM Users, IAM Roles)
+    - Action (e.g. `sqs:ReceiveMessage`)
+    - Resource (e.g. `an:aws:sqs:us-east-1:4444555556666:myQueue`)
+    - Condition (e.g. `ArnLike:"aws:SourceArn":"arn:aws:s3:*:*:bucket1", StringEquals:"aws:SourceAccount":"bucket_owner_id"`)
+  - API calls: CreateQueue, DeleteQueue, PurgeQueue, SendMessage, ReceiveMessage, ChangeMessageVisibility DeleteMessage
+    - Batch API for SendMessage, DeleteMessage, ChangeMessageVisibility
+    - ReceiveMessage can get up to 10 messages
+
+### SNS - Simple Notification Service
+
+- Pub/Sub
+- 12,500,000 subs per topic; 100,000 topics per account (or larger!)
+  - Also offers FIFO
+    - <300 publishes/s
+  - Also offers Message Filtering per subscription
+    - Message attributes
+    - Message body (if JSON)
+- Subscribers 
+  - Email
+    - Q: Can this be disabled...seems like an easy exfiltration modality
+  - SMS/Mobile notifications
+  - HTTP(S) endpoints
+  - SQS
+  - Lambda
+  - Kinesis Data Firehose
+- Publishers
+  - CloudWatch (alarms)
+  - ASG (notifications)
+  - CloudFormation (state changes)
+  - AWS Budgets
+  - S3 Bucket (events)
+  - DMS (new Replica)
+  - Lambda
+  - DynamoDB
+  - RDS (events)
+- Publishing
+  - Topic Publish (using normal SDK)
+  - Direct Publish (mobile apps SDK)
+- Encryption
+  - HTTPS for in-flight
+  - At-rest using KMS or AWS-managed keys
+- Policies similar to SQS and S3 Buckets
+- Examples
+  - SNS+SQS fan-out 
+    - SQS policy must allow SNS to write
+    - Cross-region delivery is quite possible
+    - Example: S3 events, since they can have one event rule per event type and prefix
+  - SNS to Kinesis Data Firehose to S3
+
+### Kinesis
