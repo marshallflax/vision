@@ -1521,7 +1521,7 @@
   - Compatibility: Lambda, Elastic Beanstalk, ECS, ELB, API Gateway, EC2, even on-prem
   - Traces, segments, subsegments, annotations (indexed) and metadata (not indexed)
     - Every request, or %, or rate
-    - Default: 1st request each second (reservoir) and 5% of rest (rate)
+    - Default: 1st request each _second_ (reservoir) and 5% of rest (rate)
       - Changeable dynamically
     - Q: Any ways to force resulting calls to also be traced?
   - Enabling
@@ -1544,6 +1544,14 @@
     - Writing -- `PutTraceSegments`, `PutTelemetryRecords`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
     - Reading -- `GetSampling{Rules,Targets,StatisticSummaries}`, `Get{Group,Groups,ServiceGraph,TimeSeriesServiceStatistics}`, `GetTrace{Graph,Summaries}`, `BatchGetTraces`
 - AWS Distro for OpenTelemetry
+  - Auto-instrumentation agents!
+  - Send to X-Ray, CloudWatch, Amazon Managed Service for Prometheus, or Partner Monitoring Solutions
+  - Instruments apps on AWS or on-premises
 - CloudTrail
+  - Governance, compliance, audit ... enabled by default
   - API call monitoring
+    - Management events (default logged -- both read events and write events)
+    - Data events (not logged by default)
+    - CloudTrail Insights (optional service which compares against baseline) events
   - AWS Resource audit trails
+  - Retained for 90d; Can be sent into S3 (for Athena to inspect later) or CloudWatch Logs
