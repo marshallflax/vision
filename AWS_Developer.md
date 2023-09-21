@@ -1310,3 +1310,64 @@
   - SNS to Kinesis Data Firehose to S3
 
 ### Kinesis
+
+- Kinesis Data Streams - Capture, process, store 
+  - Fixed sharding defines throughput 
+    - Producer -- 1k msgs/s, 1MB/s
+    - Shared Client -- 2k msgs/s, 2 MB/s (across all consumers)
+      - Pull -- Usual `GetRecords()` API
+      - Minimize cost
+    - Enhanced Client -- 2k msgs/s, 2 MB/s (per consumer)
+      - Push over HTTP/2 -- New `SubscribeToShard()` API
+      - Soft limit of 5 KCL per data stream
+  - Modes
+    - Provisioned (pay per shard-hour)
+    - On-demand (newer)
+      - Up to 200MiB/s 
+      - Scaled based on 30d peak.
+      - Pay per stream-hour and per GB
+  - Producers
+    - AWS SDK, KPL (Kinesis Producer Library), Amazon Kinesis Agent
+      - KPL: C++, Java, batch, compression, retries
+      - Kinesis Agent: Tails logs files.
+      - PutRecord API; batching reduces cost and increases throughput
+      - AWS CLI -- `aws kinesis put-record --stream-name $NAME --partition-key $CUSTOMER_ID`
+  - Consumers
+    - Apps (KCL, SDK)
+      - Kinesis Client Library (KCL)
+        - Java library
+          - KCL 1.x -- shared consumer
+          - KCL 2.x -- shared consumer and enhanced fan-out consumer
+        - One to many relationship from KCL client to shards.
+        - Progress checkpointed into DynamoDB
+        - Runs on EC2,EB, on-premises
+        - Record read in order in each shard
+    - Managed (Lambda, Kinesis Data Firehose, Kinesis Data Analytics)
+      - Lambda (GetBatch()), e.g. to DynamoDB.
+        - Both Classic and Enhanced fan-out
+    - AWS CLI with `aws kinesis get-shard-iterator` and then `aws kinesis get-records --shard-iterator $SHARD_ITERATOR` (return base-64 payloads _and_ a `NextShardIterator`)
+      - NB: PartitionKey is returned with each record
+  - VPC Endpoints are available for resources within VPC
+  - Records
+    - Partition key, sequence number, data blob (<1MB)
+      - `Shard # = hash(partition_key) % num_shards`
+    - Retention 1-365 days
+    - Data Immutability
+    - Same partition key --> same shard
+  - `ProvisionedThroughputExceeded`
+    - Retries with exponential backoff
+    - Increase sharding
+  - Shard splitting (e.g. if shard #2 is hot, manually transition from `[1,2,3]` to `[1,4,5,3]`. Shard #2 will be deleted once all data in it is expired). Only 1 into 2.
+  - Shard merging, e.g. `[1,4,5,3]` to `[6,5,3]`. Only 2 into 1.
+- Kinesis Data Firehose - Load into AWS data stores
+  - Fully managed, autoscaled, no replay, pay for usage
+  - Source: Applications, Clients, SDK, KPL, Kinesis Agent, Kinesis Data Streams, CloudWatch Logs, CloudWatch Events, AWS IoT
+  - Codeless and fully-managed batch writes: S3, Redshift (via S3), Amazon OpenSearch
+    - Also 3rd-party destinations: Datadog, Splunk, New Relic, MongoDB
+    - Also http endpoint
+  - Also all (or just failing) data to a backup S3 bucket
+  - Records <= 1MiB
+    - Near-real-time (60s or 1MiB latency)
+    - Supports data conversions, transformations, compression -- plus custom Lambda transformations
+- Kinesis Data Analytics - Analyze with SQL or Apache Flink
+- Kinesis Video Streams - Capture, process, and store
