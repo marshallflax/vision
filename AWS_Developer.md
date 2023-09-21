@@ -1284,7 +1284,7 @@
   - HTTP(S) endpoints
   - SQS
   - Lambda
-  - Kinesis Data Firehose
+  - Kinesis Data Firehose (but not Kinesis Data Streams)
 - Publishers
   - CloudWatch (alarms)
   - ASG (notifications)
@@ -1309,7 +1309,7 @@
     - Example: S3 events, since they can have one event rule per event type and prefix
   - SNS to Kinesis Data Firehose to S3
 
-### Kinesis
+### Kinesis Data Streams
 
 - Kinesis Data Streams - Capture, process, store 
   - Fixed sharding defines throughput 
@@ -1359,15 +1359,47 @@
     - Increase sharding
   - Shard splitting (e.g. if shard #2 is hot, manually transition from `[1,2,3]` to `[1,4,5,3]`. Shard #2 will be deleted once all data in it is expired). Only 1 into 2.
   - Shard merging, e.g. `[1,4,5,3]` to `[6,5,3]`. Only 2 into 1.
-- Kinesis Data Firehose - Load into AWS data stores
+
+### Kinesis Data Firehose
+
+- Load into AWS data stores
   - Fully managed, autoscaled, no replay, pay for usage
-  - Source: Applications, Clients, SDK, KPL, Kinesis Agent, Kinesis Data Streams, CloudWatch Logs, CloudWatch Events, AWS IoT
-  - Codeless and fully-managed batch writes: S3, Redshift (via S3), Amazon OpenSearch
-    - Also 3rd-party destinations: Datadog, Splunk, New Relic, MongoDB
-    - Also http endpoint
-  - Also all (or just failing) data to a backup S3 bucket
-  - Records <= 1MiB
-    - Near-real-time (60s or 1MiB latency)
-    - Supports data conversions, transformations, compression -- plus custom Lambda transformations
-- Kinesis Data Analytics - Analyze with SQL or Apache Flink
-- Kinesis Video Streams - Capture, process, and store
+- Source: Applications, Clients, SDK, KPL, Kinesis Agent, Kinesis Data Streams, CloudWatch Logs, CloudWatch Events, AWS IoT
+  - Only data published after Firehose configured.
+- Codeless and fully-managed batch writes
+  - S3, Redshift (via S3), Amazon OpenSearch
+    - Default S3 prefix of YYYY/MM/dd/HH (UTC)
+  - Also 3rd-party destinations: Datadog, Splunk, New Relic, MongoDB
+  - Also http endpoint
+- Also all (or just failing) data to a backup S3 bucket
+- Records <= 1MiB
+  - Near-real-time (60s or 1MiB latency)
+  - Supports data conversions, transformations, compression -- plus custom Lambda transformations
+    - JSON to Apache Parquet (read-optimized, and wider support) or Apache ORC (write-optimized, plus allows update/delete)
+      - (based on schema in AWS Glue)
+    - But first use Lambda to convert to JSON if necessary
+- Dynamic partitions based on partitioning keys (extra charge)
+- Buffering
+  - Buffer size: 5MB (1MB-128MB)
+    - Smaller results in higher costs but lower latency
+  - Buffer interval: 300s (60s-900s)
+    - Smaller results in higher costs but lower latency
+- Compression
+  - Optional gzip, snappy, zip, Hadoop-compatible snappy
+- Encryption (KMS)
+- Can create IAM role with necessary S3 perms
+- Up to 50 tags
+
+### Kinesis Data Analytics - Analyze with SQL or Apache Flink
+
+- SQL Applications (fully managed, pay for consumption)
+  - Source: Kinesis Data Streams or Kinesis Data Firehose
+  - SQL can join in reference data stored in S3 for real-time enrichment
+  - Target: Kinesis Data Streams (to Lambda or app) or Kinesis Data Firehose
+  - Uses: Time-series analytics, real-time metrics and dashboards
+- Amazon Managed Service for Apache Flink
+  - Use Fink (Java, Scala, or SQL) to process and analyze streaming data
+  - Can read in Kinesis Data Streams and Amazon MSK (Managed Kafka)
+  - Runs on a managed cluster; provides checkpoints and snapshots
+
+### Kinesis Video Streams - Capture, process, and store
