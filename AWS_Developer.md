@@ -1007,7 +1007,7 @@
       - FSx for Lustre
       - FSx for NetApp ONTAP
 
-## Elastic Beanstalk
+## Elastic Beanstalk (orchestration for environment creation, etc)
 
 - Uses:
   - EC2 -- Scaled using ASG as usual
@@ -1390,7 +1390,7 @@
 - Can create IAM role with necessary S3 perms
 - Up to 50 tags
 
-### Kinesis Data Analytics - Analyze with SQL or Apache Flink
+### Kinesis Data Analytics (KDA) - Analyze with SQL or Apache Flink
 
 - SQL Applications (fully managed, pay for consumption)
   - Source: Kinesis Data Streams or Kinesis Data Firehose
@@ -1401,5 +1401,149 @@
   - Use Fink (Java, Scala, or SQL) to process and analyze streaming data
   - Can read in Kinesis Data Streams and Amazon MSK (Managed Kafka)
   - Runs on a managed cluster; provides checkpoints and snapshots
+- Q: What type of aggregations are allowed?
 
 ### Kinesis Video Streams - Capture, process, and store
+
+## Monitoring, Troubleshooting, Auditing -- CloudWatch, X-Ray, CloudTrail
+
+- CloudWatch
+  - Metrics
+    - Builtin metrics: CPUUtilization, NetworkIn, ....
+      - In the `AWS` namespace
+      - Dimensions (up to 30): instance ID, environment, etc
+      - Timestamps
+        - EC2 default to "every 5m", but can pay for "every 1m" (e.g. t scale ASG faster)
+    - Custom metrics
+      - `PutMetricData`
+        - Accepts 2w in the past to 2h in the future, so TZ matters
+          - Non-current data takes much longer to show on graphs, etc.
+      - In a custom namespace
+      - Dimensions (up to 10): `Instance.id`, `Environment.name`, etc.
+      - Resolution
+        - Standard: 60s
+        - High Resolution: 1s, 5s, 10s, 30s
+    - Notes
+      - Free Tier allows 10 detailed monitoring metrics
+      - EC2 Memory usage must be pushed from inside the instance as a custom metric
+  - Logs
+    - Log Streams within Log Groups
+      - Log Groups, e.g. `/aws-glue/crawlers`, `/aws/datasync`, `/aws/lambda/$LAMBDA`
+        - Expiration: never, or 1d-10y
+        - Encrypted by default (KMS optional)
+    - Sources
+      - SDK
+      - CloudWatch Logs Agent (older) (EC2 and on-premises)
+        - Requires appropriate IAM perms
+      - CloudWatch Unified Agent (EC2 and on-premises)
+        - Can also send system-level metrics (CPU, Disk, RAM, swap, netstat, processes, etc)
+        - Configurable using SSM Parameter Store
+      - Elastic Beanstalk
+      - ECS containers
+      - Lambda
+      - VPC Flow Logs
+      - API Gateway
+      - CloudTrail (filtered)
+      - Route53 (DNS queries)
+    - Metric Filter
+      - Synthetic metrics based on query (up to three dimensions). Not retroactive.A
+      - Can trigger CloudWatch Alarm
+    - Destinations
+      - Export 
+        - S3 (CreateExportTask can take up to 12h!)
+        - CloudWatch Logs Subscriptions (real-time, supports filtering)
+          - Up to two subscription filters per log group (Q: Why so low?)
+          - Subscription Destination (from other accounts)
+            - "Destination Access Policy" in recipient account, and an IAM Role which can be assumed by the Sender
+          - Lambda
+          - Kinesis Data Streams (even from multiple subscription filters from multiple accounts)
+            - Kinesis Data Analytics (KDA)
+            - EC2
+            - Lambda
+          - Kinesis Data Firehose (KDF)
+            - S3 (near real-time)
+            - OpenSearch
+      - CloudWatch Logs Insights 
+        - Auto-detects fields from AWS services and JSON log events
+        - Custom query language
+          - `fields @timestamp, @messages | sort @timestamp desc | limit 20`
+          - `filter @message like /Exception/ | stats count(*) as exceptionCount by bin(5m) | sort exceptionCount desc`
+          - `fields @message | filter @message not like /Exception/`
+        - Save queries to CloudWatch Dashboards
+          - Queries can span Log Groups from multiple AWS accounts
+          - Query engine -- not real-time engine
+  - Alarms (trigger notification)
+    - States: OK, INSUFFICIENT_DATA, ALARM
+    - Period (length of time to evaluate metric): 10s, 30s, $$N$$ minutes
+    - Actions
+      - EC2 (e.g. restarting instance) 
+      - EC2 Auto Scaling
+      - Amazon SNS
+      - Composite Alarms! (AND, OR)
+    - `aws cloudwatch set-alarm-state` useful for testing
+    - CloudWatch Synthetics Canary
+      - Manually reproduce critical user journeys -- checks success, availability, latency
+      - Scripts in Node.js or Python
+      - Programmatic access to headless Google Chrome instance. (Q: Chromium???)
+      - May run periodically
+      - Blueprints
+        - Heartbeat Monitor
+        - API Canary
+        - Broken Link CHecker
+        - Visual Monitoring vs baseline
+        - Canary Recorder (Q: Node.js or Python???)
+        - GUI Workflow Builder
+  - Amazon EventBridge (formerly "CloudWatch Events")
+    - Schema registry (including versioned and inferred schema), which can generate code bindings (Java, TypeSCript, Python, Go)
+    - Policies
+      - Can aggregate events from other accounts and/or regions.
+    - Sandbox
+    - Sources 
+      - Scheduled (cron)
+      - Typical Events (may be filtered)
+        - IAM -- root user sign-in
+        - EC2 -- instance start
+        - CodeBuild -- failure
+        - S3 -- object upload event
+        - Trusted Advisor -- new finding
+        - CloudTrail -- anything
+    - Destinations
+      - Aggregation: Another event bus
+      - Compute: Lambda, AWS Batch, Launch ECS Task
+      - Integration: SQS, SNS, Kinesis Data Stream
+      - Maintenance: SSM, EC2 Actions
+      - Orchestration: Step Functions, CodePipeline, CodeBuild
+      - Optionally archive (by default indefinitely), which allows replaying
+    - Buses!
+      - AWS services publish to the default event bus
+      - AWS SaaS Partners (e.g. zendesk, datadog, salesforce) publish to a partner event bus
+- X-Ray (Distributed traces)
+  - Compatibility: Lambda, Elastic Beanstalk, ECS, ELB, API Gateway, EC2, even on-prem
+  - Traces, segments, subsegments, annotations (indexed) and metadata (not indexed)
+    - Every request, or %, or rate
+    - Default: 1st request each second (reservoir) and 5% of rest (rate)
+      - Changeable dynamically
+    - Q: Any ways to force resulting calls to also be traced?
+  - Enabling
+    - Java/Python/Go/Node.js/.NET -- import the X-Ray SDK (and minimal code modification)
+      - `AWS_XRAY_DAEMON_ADDRESS` tells the SDK where to publish to (typically port UDP 2000)
+      - X-Ray daemon (intercepting UDP) 
+      - Manually identify segment boundaries, etc
+    - Lambda
+      - X-Ray must be imported and "Active Tracing" enabled
+    - Elastic Beanstalk
+      - `.ebextensions/xray-daemon.config` (`option_settings:aws:elasticbeanstalk:xray:XRayEnabled:true`), or use the console.
+      - Application of course needs the X-Ray SDK
+      - (Daemon not provided for Multi-container Docker)
+    - ECS (Multiple options)
+      - XRay Agent per EC2
+      - XRay Container as a sidecar for each App Container
+      - Fargate -- can only use sidecar
+    - Of course, in all cases, needs IAM rights to write to X-Ray
+  - API
+    - Writing -- `PutTraceSegments`, `PutTelemetryRecords`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
+    - Reading -- `GetSampling{Rules,Targets,StatisticSummaries}`, `Get{Group,Groups,ServiceGraph,TimeSeriesServiceStatistics}`, `GetTrace{Graph,Summaries}`, `BatchGetTraces`
+- AWS Distro for OpenTelemetry
+- CloudTrail
+  - API call monitoring
+  - AWS Resource audit trails
