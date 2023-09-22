@@ -1,11 +1,13 @@
 {
     "cSpell.words": [
+        "Alexa",
         "allkeys",
         "autofailover",
         "autoscaled",
         "AWSALB",
         "AWSALBAPP",
         "AWSALBTG",
+        "AWSX",
         "Binpack",
         "boto",
         "canaried",
@@ -21,6 +23,7 @@
         "Flink",
         "Gbps",
         "GENEVE",
+        "getenv",
         "HEALTHCHECKS",
         "HMAC",
         "Idempotency",
@@ -50,6 +53,7 @@
         "Udemy",
         "Userdata",
         "Voronoi",
+        "Webapps",
         "xlarge"
     ]
 }

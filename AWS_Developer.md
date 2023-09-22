@@ -549,6 +549,7 @@
   - Bucket naming: no uppercase, no underscore, 3-63 chars, not an IP.
   - Key is full path
   - Objects <5000GB (but multi-part upload for >5GB) with metadata key/value pairs, up to ten unicode key/value tags, and perhaps version ID.
+  - Objects have an ETag based solely on their contents (and perhaps KMS, etc)
 
 ### S3 Security
 
@@ -1555,3 +1556,182 @@
     - CloudTrail Insights (optional service which compares against baseline) events
   - AWS Resource audit trails
   - Retained for 90d; Can be sent into S3 (for Athena to inspect later) or CloudWatch Logs
+
+## Lambda
+
+- Initially, FaaS (Functions as a Service)
+  - S3 for static content
+  - API Gateway to Lambda to DynamoDB for REST API
+  - Cognito for Identity
+  - SNS, SQS, Kinesis Data Firehose
+  - Aurora Serverless
+  - Step Function
+  - Fargate
+- For short (or at least shortish) executions (under 15m)
+  - Can set timeout to any number of seconds
+  - Q: So sync is far cheaper than async?
+- Runs on-demand, scaling is automated
+  - Pay per request and compute
+    - Free tier is 1,000,000 Requests and 400,000 GB-seconds of compute
+  - Can get up to 10GB RAM or as little as 128MB
+    - (CPU and network scales with RAM)
+  - CloudWatch monitoring
+- Many languages
+  - Node.js, Python, Java, C# (.NET core), golang, C# / Powershell, Ruby
+  - Custom Runtime API -- Rust, etc.
+  - Lambda Container Image implementing Lambda Runtime API
+    - But use ECS/Fargate for arbitrary Docker images
+- Integrations
+  - API Gateway
+  - Kinesis
+  - DynamoDB (triggers written in Lambda!)
+  - S3
+  - CloudFront
+  - CloudWatch Events EventBridge, CloudWatch Logs, SNS, SQS, Cognito
+- Creation
+  - Author from scratch
+  - Use a blueprint
+  - Container image
+  - Browse repo  
+
+### Lambda -- Synchronous
+
+- User-invoked
+  - CLI (`aws lambda list-functions`)
+    - `aws lambda invoke --function-name hello-world --cli-binary-format raw-in-base64-out --payload '{"key1:"value1"}' --region $REGION response.json`
+  - ALB (Application Load Balancer)
+    - Lambda function registered in the target group (via the "EC2 > Target groups" console, even though it's not EC2)
+    - Request: `requestContext`, `headers` and `queryStringParameters` sub-documents; `httpMethod`, `path`, `body` (perhaps base64) fields.
+      - ALB "Multi-Header Values" setting uses arrays for repeated query string fields, e.g. `"queryStringParameters":{"name":["foo","bar"]}`
+      - Q: Why is the lecture talking about this field for "responses" ... it's clearly about "requests"!
+    - Response: `headers` sub-document (especially `"Content-Type"`), `statusCode` and `body` fields
+      - Q: Why also a `statusDescription` field?
+  - SDK
+  - API Gateway
+  - CloudFront (Lambda@Edge)
+- Service-invoked
+  - Cognito, ASW Step FunctionsA
+- Other
+  - Lex, Alexa, Kinesis Data Firehose
+
+### Lambda -- Asynchronous
+
+- `202 Accepted` HTTP response
+- Sources
+  - S3 events
+    - In addition to SNS topics and SQS queues (which can itself call Lambda), S3 events can directly trigger an async Lambda (even with an SQS DLQ)
+    - Enable bucket versioning to get _every_ update on an object
+    - Typical case: write S3 metadata to DynamoDB or even RDS
+    - All intra-region, of course
+  - SNS
+  - CloudWatch Events
+  - CloudWatch EventBridge
+  - CodeCommit
+  - CodePipeline
+  - CloudWatch Log, 
+  - Simple Email Service
+  - CloudFormation
+  - AWS Config
+  - AWS IoT
+  - AWS IoT Events
+- Data
+  - Event
+    - `id`, `source`, `account`, `time`, `region`, `resources`, `detail` (EventCategories, SourceType, SourceArn, Message, etc), etc
+  - Context
+    - `aws_request_id`, `function_name`, `invoked_function_arn`, `function_version` (`$LATEST`), `memory_limit_in_mb`, `log_group_name`, `client_context`, etc
+- Retry strategy: max 3 tries total -- T+1m, T+3m
+  - Lambda function should be idempotent
+  - Should define and SNS or SQS DLQ (and of course this requires IAM perms)
+    - But is there any replay ability?
+- EventBridge had "Schedule" rules, but there's also a new "EventBridge Scheduler" service
+
+### Lambda -- Event Source Mapping (synch)
+
+- Polling 
+  - Streams (Kinesis Data Streams and DynamoDB Streams)
+    - One iterator for each shard, and parallim up to ten batches per shard (respecting partition keys)
+    - Start from: (1) the beginning, (2) from a timestamp, or (3) only new items.
+    - Can delay processing until "batch window" is full
+    - NB: By default, if single item fails, entire batch is reprocessed until success or expiration. (Necessary for in-order processing)
+      - Can discard old events to a "Destination"
+      - Restrict retries
+      - Split-batch-on-error (useful for timeout issues)
+  - Queues (SQS and SQS FIFO)
+    - Long Polling (1-10 messages in batch for FIFO, 1-10000 for standard queues -- but batch window must be at least 1 sec if size is over 10)
+    - Recommendation: queue visibility timeout should be 6x the Lambda timeout
+    - DLQ is created on the SQS queue, not the Lambda instance (which is only for async)
+      - Or invoke a 2nd lambda for failures
+    - For standard queues, retries will likely be in totally different batches than before
+      - Single element might be processed twice, even if there's no error
+    - Scaling 
+      - SQS -- Lambda adds up to 60 more instances per minute (up to 1000 simultaneous batches) for scaling
+      - SQS Fifo -- Lambda scales to the number of active message groups
+    - `AWSLambdaSQSQueueExecutionRole` (aws-managed)
+- Lambda invoked synchronously
+
+### Lambda Destinations
+
+- For Asynchronous or Batch invocation
+- Destinations for success and/or failure
+- SQS, SNS, EventBridge, and even another Lambda!
+- (More flexible than classic DLQ)
+
+### Lambda Security
+
+- Every lambda function has a role, which is granted policies (or roles)
+- Managed roles for event source mapping
+  - `AWSLambdaBasicExecutionRole` -- upload logs to CloudWatch
+  - `AWSLambdaKinesisExecutionRole` -- read from Kinesis
+  - `AWSLambdaDynamoDBExecutionRole` -- read from DynamoDB Streams
+  - `AWSLambdaSQSQueueExecutionRole` -- read from SQS
+- Other managed roles
+  - `AWSLambdaVPCAccessExecutionRole` -- Deploy in VPC
+  - `AWSXRayDaemonWriteAccess` -- Send traces
+- Resource-based policies
+  - Granting other accounts/services access to Lambda
+  - (Similar to S3 bucket policies)
+
+### Lambda Environment Variables
+
+- String key/value pairs available to code.
+- May include KMS-encrypted secrets
+- Language-specific
+  - Python: `import os` and `os.getenv("ENV_VAR")`
+
+### Lambda Logging/Monitoring
+
+- CloudWatch Logs -- enabled by default
+- CloudWatch Metrics -- Invocations, durations, concurrent executions, error count, success rates, throttling, async delivery failures, iterator age (streams)
+- X-Ray tracing 
+  - Enable "Active Tracing"
+  - Grant AWSXRayDaemonWriteAccess
+  - Use X-Ray SDK
+  - Environment variables 
+    - `_X_AMZN_TRACE_ID`  (tracing header)
+    - `AWS_XRAY_CONTEXT_MISSING` (default `LOG_ERROR`)
+    - `AWS_XRAY_DAEMON_ADDRESS` (IP:PORT)
+
+### CloudFront Functions and Lambda@Edge
+
+- Serverless and deployed globally; pay for what you use
+  - Client-->CloudFront ("Viewer Request")
+  - CloudFront-->Origin ("Origin Request")
+  - Origin-->CloudFront ("Origin Response")
+  - CloudFront-->Client ("Viewer Response")
+- CloudFront Functions
+  - Native CloudFront feature
+  - Only JavaScript
+  - High-scale (millions/s), latency-sensitive (sub-millisecond) CDN content customizations
+  - Modified _either_ viewer request _or_ viewer response
+- Lambda@Edge
+  - NodeJS or Python
+- Typical use-cases
+  - Website security/privacy
+  - Dynamic Webapps at the Edge
+  - SEO
+  - Intelligent routing
+  - Bot mitigation
+  - A/B Testing
+  - Authentication/authorization
+  - User prioritization
+  - User tracking/analytics
