@@ -1649,7 +1649,7 @@
 
 - Polling 
   - Streams (Kinesis Data Streams and DynamoDB Streams)
-    - One iterator for each shard, and parallim up to ten batches per shard (respecting partition keys)
+    - One iterator for each shard, and parallel up to ten batches per shard (respecting partition keys)
     - Start from: (1) the beginning, (2) from a timestamp, or (3) only new items.
     - Can delay processing until "batch window" is full
     - NB: By default, if single item fails, entire batch is reprocessed until success or expiration. (Necessary for in-order processing)
@@ -1740,7 +1740,6 @@
     - >1ms allowed
     - Access to HTTP message body allowed
     - CPU, Memory, AWS SDK, File Systems, 
-
   - Website security/privacy
   - Dynamic Webapps at the Edge
   - SEO
@@ -1750,3 +1749,73 @@
   - Authentication/authorization
   - User prioritization
   - User tracking/analytics
+
+### Lambda networking
+
+- By default Lambdas run in a separate VPC
+- If you tell the Lambda: VPC ID, Subnets, Security Groups, then Lambda will create an ENI (elastic network interface) in your subnets
+  - Requires `AWSLambdaVPCAccessExecutionRole` or equivalent
+  - Internal resource (e.g. RDS) needs to allow access from the Lambda security group
+  - Access to the public internet requires a NAT Gateway or Instance
+  - Access to DynamoDB requires NAT or VPC endpoint.
+  - Probably also need `AWSLambdaENIManagementAccess`
+  - CloudWatch Logs doesn't require anything, fortunately
+
+### Lambda Function Configuration
+
+- vCPU not directly available...instead RAM from 128MB to 10GB.
+  - 1792MB (1.750 GiB) <==> 1 vCPU
+    - Any more requires threading
+- Timeout: 3s (1s-900s)
+- Execution context is saved for some time to speed the next call
+  - So do your `db.connect(os.getenv("DB_URL"))` outside of the handler itself.
+- `/tmp` (10GB) available for checkpointing -- but use S3 for permanent persistence
+  - Use KMS Data Keys if you need.
+
+### Lambda Layers
+
+- Custom runtimes
+  - C++, Rust, etc.
+- Externalize static dependencies for reuse
+- AWS-provided
+  - Perl5
+  - Python 3.8 + SciPy 1.x
+  - AppConfig-Extension
+  - LambdaInsightsExtension
+  - AWS CodeGuru Profiler
+- Up to five layers and a total of 250MB of immutable storage (but store in S3 if >50MB)
+  - No additional charge
+  - Node.js -- `npm` and `node_modules/`
+    - CloudShell already contains `npm`
+    - `npm install aws-xray-sdk; chmod a+r *; zip -r function.zip .; aws lambda create-function --zip-file fileb://function.zip --function-name lambda-xray-with-deps --runtime nodejs14.x --handler index.handler --role arn:aws:iam::$ACCT:role/DemoLambdaWithDependencies`
+      - (Yes, `fileb://` is for binary local files!)
+      - `const AWSXRay = require("aws-xray-sdk-core")`
+      - `const AWS = AWSXRay.captureAWS(require("aws-sdk"))`
+      - `const s3 = new AWS.S3()`
+      - `exports.handler = async function(e) {return s3.listBuckets().promise()}`
+  - Python -- `pip --target`
+  - Java -- include `.jar` files
+  - Native libraries -- compile under Amazon Linux
+  - AWS SDK already included
+
+### Lambda EFS
+
+- Requires EFS Access Points
+- Beware EFS connection limits during bursts of activity
+
+### Lambda Concurrency
+
+- By default up to 1000 concurrent executions across _all_ functions
+  - Open a support ticket to get above 1000
+- Synchronous
+  - Return 429 "Too Many Requests"
+- Asynchronous
+  - Retry and then DLQ
+
+### Lambda Cold Starts and Provisioned Concurrency
+
+- Lots of dependencies, the initial setup can take a few seconds.
+- Application Auto Scaling can have "Provisioned Concurrency"
+  - Scheduled or Target Utilization
+- Can reserve concurrency for a specific function -- <https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html>
+  - A "zero" reserved concurrency disables the function.
