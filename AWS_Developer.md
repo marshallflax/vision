@@ -1721,11 +1721,26 @@
 - CloudFront Functions
   - Native CloudFront feature
   - Only JavaScript
-  - High-scale (millions/s), latency-sensitive (sub-millisecond) CDN content customizations
+    - Less than 2MB of memory; package size < 10KB
+    - No network access, filesystem access, message body access.
+  - High-scale (millions/s), latency-sensitive (sub-millisecond) CDN content customizations. 1/6th price of @Edge
   - Modified _either_ viewer request _or_ viewer response
 - Lambda@Edge
   - NodeJS or Python
+  - Scales to (thousands/s); latency up to 5s-10s
+  - Can modify both viewer and origin, both requests and responses
+  - Authored in one region (typically us-east-1) and then CloudFront replicates to other regions
 - Typical use-cases
+  - CloudFront
+    - Cache key normalization
+    - Header manipulation
+    - URL rewrites/redirects
+    - Create/validate user-generated tokens (e.g. JWT -- JSON Web Tokens)
+  - Lambda@Edge
+    - >1ms allowed
+    - Access to HTTP message body allowed
+    - CPU, Memory, AWS SDK, File Systems, 
+
   - Website security/privacy
   - Dynamic Webapps at the Edge
   - SEO
