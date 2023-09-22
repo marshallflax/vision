@@ -1672,7 +1672,7 @@
 ### Lambda Destinations
 
 - For Asynchronous or Batch invocation
-- Destinations for success and/or failure
+- Define up to two destinations -- for success and/or failure
 - SQS, SNS, EventBridge, and even another Lambda!
 - (More flexible than classic DLQ)
 
@@ -1797,6 +1797,13 @@
   - Java -- include `.jar` files
   - Native libraries -- compile under Amazon Linux
   - AWS SDK already included
+- Lambda Container Images allow images of up to 10GB from ECR
+  - Base image must implement Lambda Runtime API
+    - Python, Node.js, Java, .NET, Golang, Ruby
+  - Testable using Lambda Runtime Interface Emulator
+  - Sample Dockerfile: `FROM amazon/aws-lambda-nodejs:12; COPY app.js package*.json ./; RUN npm install; CMD ["app.lambdaHandler"]`
+    - AWS-provided base images are pre-cached by Lambda service
+    - Use Multi-Stage builds (i.e. discard intermediate artifacts)
 
 ### Lambda EFS
 
@@ -1819,3 +1826,64 @@
   - Scheduled or Target Utilization
 - Can reserve concurrency for a specific function -- <https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html>
   - A "zero" reserved concurrency disables the function.
+
+### Lambda and Cloudformation
+
+- inline (without dependencies) `Resources:$FunctionName:Code:ZipFile: |`
+- Via S3 `Resources:$Function:Properties:Code:{S3Bucket,S3Key,S3ObjectVersion}`
+  - Version the Bucket or be confused!
+  - Q: Why aren't versioned buckets mandatory here?
+  - Allows deployment to multiple accounts.
+
+### Lambda Version
+
+- Published versions are immutable
+- Aliases (e.g. "dev", "test", "prod") are mutable
+  - Canary deployment via _weighting_
+  - Aliases cannot reference other aliases (except `$LATEST`)
+
+### Lambda and CodeDeploy
+
+- Can automate traffic shift for Lambda aliases.
+- Integrated with SAM (Serverless Application Model) framework
+- Strategies
+  - Linear10PercentEvery3Minutes
+  - Linear10PercentEvery10Minutes
+  - Canary10Percent5Minutes (10% then 100%)
+  - Canary10Percent30Minutes (10% then 100%)
+  - AllAtOnce
+- AppSpec.yml : name, alias, currentVersion, targetVersion
+
+### Lambda -- Function URL
+
+- No need for API Gateway
+- https://$URLID.lambda-url.$REGION.on.aws (IPv4 and IPv6)
+  - Only accessible from public URL
+  - Supports CORS and Resource-based policies
+  - Can only export function aliases or `$LATEST`
+- AuthType
+  - NONE -- Allow unauthenticated access (but Resource-based policy must grant public access)
+  - AWS_IAM -- Both IAM and Resource-based policies are checked
+  - Intra-account -- Either policy must allow
+  - Inter-account -- Both policies must allow
+
+### Lambda -- CodeGuru Profiling
+
+- Supports Java and Python
+- Activate from Lambda Console; creates Profiler Group
+
+### Lambda -- Per-Region limits
+
+- Execution
+  - Memory: 128MiB-10GiB (1MiB increments)
+  - Execution Time: 900s
+  - Env variables: 4k
+  - /tmp: 512MB - 10GB
+  - Concurrency: 1000 (or larger)
+- Deployment
+  - Compressed: 50MB, uncompressed: 250MB
+
+### Lambda Best Practices
+
+- Lambda functions should never call themselves!!!
+
