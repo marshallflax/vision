@@ -2,14 +2,13 @@
 
 ## Overview
 
+- <https://d1.awsstatic.com/training-and-certification/docs-dev-associate/AWS-Certified-Developer-Associate_Exam-Guide.pdf>
 - Develop Using
   - Service APIs
   - CLI
   - SDKs
 - Deploy Using
   - CI/CD pipelines
-
----
 
 ### Domain 1 -- Development
 
@@ -1887,3 +1886,51 @@
 
 - Lambda functions should never call themselves!!!
 
+## DynamoDB
+
+- Reminder: RDS only scales horizontally using sharding or RDS Read Replicas
+- Regional managed NoSQL database with replication across AZ
+  - No need to "create a database" ... just create tables.
+    - Tables internally partitioned. (One partition per 3000 RCU and per 1000 WCU, or per 10GB of storage, whichever is larger.)
+    - RCUs and WCUs then spread _evenly_ across partitions
+  - Scales to trillions of rows, 100s of TB storage, millions of requests per second
+    - String, Number, Binary, Boolean, Null
+    - List and Map; String Set, Number Set, Binary Set
+    - Records up to 400KB
+  - Standard and Infrequent Access (IA) table classes
+- Tables
+  - Primary Key -- fixed (binary, number, or string)
+    - Option: Well-distributed partition key (usually a hash of a high-cardinality field)
+    - Option: Partition Key + Sort Key ("HASH + RANGE")
+      - Really, just a special instance of composite key, but sort-key is sortable
+  - Attributes -- can increase over time, and nullable
+  - Explicit types `{"user_id": {"S": "54867546"}, "first_name": {"S": "John"}, "last_name": {"S": "Doe"}}`
+    - `S`: String, `N`: Number: `B`: Base64 binary, `BOOL`: `true`/`false`, `L`: List, `M`: Map, `SS`: String Set, `NS`: Number Set, `BS`: Base64 Binary Set
+- Optional
+  - Secondary indices
+  - Point-in-time recovery (PITR)
+  - Time-to-Live (TTL)
+  - DynamoDB stream
+  - Replication Regions
+- Modes
+  - Eventually-consistent read (default) vs strongly-consistent read 
+    - Set `ConsistentRead` in API calls (`GetItem`, `BatchGetItem`, `Query`, `Scan`)
+    - Higher latency and consumes twice the RCU
+- Capacity
+  - Provisioned (default)
+    - Can be free tier
+    - Read (RCU) and write (WCU) capacity separately specified
+      - Autoscaling possible, with min/max "capacity units" and a default-70% target utilization
+      - (Or just a fixed number of "capacity units")
+      - Burst Capacity, and then "ProvisionedThroughputExceededException" and exponential-backoff
+      - WCU
+        - One write/s up to 1KB
+      - RCU
+        - One Strongly-consistent read or two Eventually-consistent read per second, up to 4KB in size.
+        - DynamoDB Accelerator (DAX) can cache reads
+  - On-demand (pay per read/write) -- no further configuration necessary
+    - 2.5 more expensive than provisioned
+    - Read/Write Request Units (RRU, WRU) same as RCU/WCU definitions
+  - Can switch between Provisioned and On-demand once every 24 hours
+- Encryption
+  - DynamoDB-owned, or KMS, or manually-managed
