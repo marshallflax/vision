@@ -1908,14 +1908,33 @@
     - `S`: String, `N`: Number: `B`: Base64 binary, `BOOL`: `true`/`false`, `L`: List, `M`: Map, `SS`: String Set, `NS`: Number Set, `BS`: Base64 Binary Set
 - Optional
   - Secondary indices
+    - Local Secondary Index (LSI)
+      - Still within the same Partition Key as base table
+      - Uses the WCUs and RCUs of the main table
+      - One scalar attribute (String, Number, Binary)
+      - Up to five per table
+      - Defined at table creation time
+      - Attribute projections: KEYS_ONLY, ALL, INCLUDE (specific)
+    - Global Secondary Index
+      - Alternative Primary key from the base table
+      - Index must have its own provisioned RCUs and WCUs (typically same as underlying table)
+        - If writes are throttled to a GSI, then writes to the main table are also throttled.
+      - Can be added/modified after table creation
+      - Attribute projections typically include the main table's partition key
+      - Q: Must be unique???
   - Point-in-time recovery (PITR)
-  - Time-to-Live (TTL)
+  - Per-record Time-to-Live (TTL)
+    - Simply specify an attribute (perhaps `expire_on`) in Unix Epoch seconds.
+    - No WCUs to expire, but take 48h after the Unix Epoch end-of-life time.
+    - Once finally deleted, removed from LSIs and GSIs.
+    - Deletion events do show up in DynamoDB streams.
   - DynamoDB stream
   - Replication Regions
 - Modes
   - Eventually-consistent read (default) vs strongly-consistent read 
     - Set `ConsistentRead` in API calls (`GetItem`, `BatchGetItem`, `Query`, `Scan`)
     - Higher latency and consumes twice the RCU
+  - Transactional
 - Capacity
   - Provisioned (default)
     - Can be free tier
@@ -1927,10 +1946,167 @@
         - One write/s up to 1KB
       - RCU
         - One Strongly-consistent read or two Eventually-consistent read per second, up to 4KB in size.
-        - DynamoDB Accelerator (DAX) can cache reads
+        - DynamoDB Accelerator (DAX) can cache reads, queries, and scans
+          - No application logic changes
+          - Multi-AZ (min 3 notes recommended)
+            - Port 8111 or 9111 (encrypted in transit)
+          - 5m Query TTL and 5m Item TTL
+          - KMS, VPC, IAM, CloudTrail, etc.
+          - Can store aggregation results in Amazon ElastiCache
   - On-demand (pay per read/write) -- no further configuration necessary
     - 2.5 more expensive than provisioned
     - Read/Write Request Units (RRU, WRU) same as RCU/WCU definitions
   - Can switch between Provisioned and On-demand once every 24 hours
 - Encryption
   - DynamoDB-owned, or KMS, or manually-managed
+- Operations
+  - `PutItem` -- create or replace
+  - `UpdateItem` -- modify only specified attributes
+    - Also supports "Atomic Counters"
+  - Conditional Writes/Update/Delete
+    - For `PutItem`, `UpdateItem`, `DeleteItem`, and `BatchWriteItem`
+    - Expressions
+      - `attribute_exists`, `attribute_not_exists`, `attribute_type`, `IN`
+        - e.g., `attribute_not_exists(partition_key)` or `attribute_not_exists(partition_key) AND attribute_not_exists(sort_key)` useful for preventing overwriting at all
+      - string-specific: `contains`, `begins_with`, `size`
+      - numeric: `between`
+      - Composable with `AND`, `OR`, `NOT`, and `()`
+      - Expression can contain `:variable`, populated by an `--expression-attribute-values file://values.json`
+    - No performance hit; supports concurrency
+  - `GetItem` -- based on primary key
+    - Default: Eventually-Consistent Read
+    - `ProjectionExpression` -- retrieve only some attributes
+  - `Query`
+    - `KeyConditionExpression` 
+      - Mandatory: Exact match on partition key value
+      - Optional: Inequalities and "beginsWith" on the sort key value
+    - `FilterExpression` (optional)
+      - Non-key attributes
+    - `Limit` 
+      - Max number of records to return
+      - (Also limited to 1MB of data)
+      - Pagination supported
+    - May query: tables, Local Secondary Index, or Global Secondary Index
+  - `Scan` -- read entire table and then filter (inefficient and uses lots of RCU)
+    - Returns up to 1MB (and then pagination)
+    - Supports Parallel Scan
+    - Supports `ProjectionExpression` and `FilerExpression` (no change to RCU)
+  - `DeleteItem`
+    - Optionally conditional
+  - `DeleteTable`
+    - Far cheaper than one-by-one `DeleteItem`
+  - (Batching available and performed in parallel, but partial success is possible)
+    - `BatchWriteItem` 
+      - Up to 25 `PutItem` and/or `DeleteItem` -- but _not_ `UpdateItem`
+      - Up to 16MB data in total; up to 400K per item
+      - Returns `UnprocessedItems` list -- backoff or add WCU
+    - `BatchGetItem`
+      - Multiple tables!
+      - Up to 100 items, total 16MB of data
+      - Returns `UnprocessedKeys` -- backoff or add RCU
+  - PartiQL -- SQL-compatible query language
+    - SELECT, INSERT, UPDATE, DELETE -- but _no_ joins.
+    - Use AWS Management Console, NoSQL Workbench for DynamoDB, DynamoDB APIs, AWS CLI, AWS SDK
+- Paging with `--max_items` and `NextToken` to be passed as the next `--starting-token`
+
+### DynamoDB Streams
+
+- Ordered stream of CRUD operations on a table
+  - Retained up to 24h
+  - Sharded (like Kinesis Data Streams) but shards provisioned by AWS
+- Content (not retroactive)
+  - KEYS_ONLY
+  - NEW_IMAGE
+  - OLD_IMAGE
+  - NEW_AND_OLD_IMAGES
+- Reading
+  - Sent to Kinesis Data Streams (and hence to Kinesis Data Firehose)
+  - Read by AWS Lambda (synchronous)
+    - Need to define an Event Source Mapping
+    - Grant Lambda IAM permissions to read from underlying DynamoDB table
+      - `AWSLambdaDynamoDBExecutionRole`
+        - "dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator", "dynamodb:ListStreams"
+        - "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" 
+      - `AmazonDynamicDBReadOnlyAccess`
+        - Lots more -- <https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonDynamoDBReadOnlyAccess.html>
+    - Choose batch size (1-10000)
+      - event.Records[].{eventID,eventName}
+  - Read by Kinesis Client Library apps
+- Uses
+  - React in real-time
+  - Analytics
+  - Insert into derived tables
+  - Insert into OpenSearch service
+  - Implement cross-region replication
+
+### DynamoDB Transactions
+
+- ACID (atomicity, consistency, isolation, durability)
+- Read Modes: Eventual, Strong, Transactional
+- Write Modes: Standard, Transactional
+- Consumes 2x WCU and 2x RCU (prepare and commit)
+  - TransactGetItems
+  - TransactWriteItems
+
+### DynamoDB as a Session State Cache
+
+- Common use-case
+- Remember: DynamoDB is serverless whereas ElastiCache is in-memory
+- Remember: EFS must be attached to EC2 instances
+- Remember: Instance Store is only for local caching -- not shared caching
+- Remember: S3 is higher-latency and meant for larger objects
+
+### DynamoDB Write Sharding
+
+- Add a suffix to the partition key value
+  - Random or Calculated suffix
+  - Q: How to read afterwards?
+
+### DynamoDB Write Types
+
+- Concurrent Writes
+  - Last wins
+  - Conditional writes gives you "first wins"
+- Atomic Writes
+  - "Increase by 1"
+  - Q: I think the example just wraps the read and write into a transaction, as opposed to some `(v) => v+1` stuff.
+- Batch Writes
+  - Many puts/updates at a time.
+
+### DynamoDB Large Object Patterns
+
+- Store in S3 and store a URL thereof in DynamoDB thereof
+- We can have Lambda triggers listening to S3 events and storing object metadata in DynamoDB. (Making up for S3 searching limitations.)
+
+### DynamoDB Operations
+
+- Table Cleanup
+  - Option (slow) -- Scan and DeleteItem
+  - Option (faster) -- Drop-and-recreate
+- Table duplication
+  - Option -- AWS Data Pipeline can use an EMR (Elastic MapReduce) Cluster to read from DynamoDB and write to S3.  Then read from S3 and write to a second DynamoDB table.
+  - Option -- Backup-and-restore (can take some time)
+  - Option -- Write code and do Scan + BatchWriteItem
+
+### DynamoDB Security
+
+- Security
+  - VPC Endpoints available.
+  - Access controlled via IAM
+  - Encryption at rest using KMS and in transit using https
+- Backup and Restore
+  - PointInTimeRestore (PITR)
+  - No performance impact
+- Global Tables
+  - Can replicate to multiple regions using DynamoDB Streams
+- DynamoDB Local
+  - Local instance for testing purposes
+- Database Migration Service (AWS DMS)
+  - Helps migration to DynamoDB from MongoDB, Oracle, MySQL, S3, etc
+- Direct user interaction (e.g., from a browser)
+  - Get temporary AWS credentials from an identity provider
+    - Amazon Cognito Identity Pools (authorization)
+      - Amazon Cognito User Pools (identification)
+    - Web Identity Federation 
+      - Google, Facebook, OpenID Connect, SAML
+  - `"Condition":"ForAllValues:StringEquals":"dynamodb:LeadingKeys":["${cognito-identity.amazonaws.com:sub}"]`
