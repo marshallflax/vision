@@ -2110,3 +2110,83 @@
     - Web Identity Federation 
       - Google, Facebook, OpenID Connect, SAML
   - `"Condition":"ForAllValues:StringEquals":"dynamodb:LeadingKeys":["${cognito-identity.amazonaws.com:sub}"]`
+
+## API Gateway
+
+- IAM permissions required to directly call Lambda functions
+- API Gateway
+  - Exposes Lambda and internal HTTP endpoints (on premises, Application Load Balancer, etc)
+    - Can also expose any AWS Service!
+      - For example, allow users to publish messages to Kinesis Data Streams
+  - Supports WebSocket
+  - Supports API versioning
+    - Versions are deployed to "stages", e.g. "dev"
+    - Stage variables (similar to environment variables) -- `lambda-api-gateway-proxy-root-get:${stageVariables.lambdaAlias}`
+      - For example, specify which Lambda alias to use.
+      - HTTP endpoints
+      - Parameter mapping templates
+  - Supports multiple environments
+  - Authentication and Authorization
+    - Authentication
+      - IAM Roles (for internal apps)
+      - Cognito (e.g., mobile users)
+      - Custom Authorizer (Lambda function)
+    - HTTPS Termination (AWS Certificate Manager -- ACM)
+      - Edge-Optimized endpoints must have certificate in "us-east-1"
+      - Regional endpoints must have certificate in the API Gateway region
+      - CNAME or alias record in Route 53
+  - API Keys
+  - Per-stage
+    - Rate limiting; cache responses
+    - Web Application Firewall (optional)
+    - SSL certificate
+    - CloudWatch Logs and/or Metrics
+    - X-Ray tracing
+    - Canary deployment (with different stage variables)
+      - Blue/green deployment
+  - Import API from Swagger / OpenAPI 3
+  - Generate SDK and API specs -- Export as Swagger or OpenAPI 3 (optionally with Postman)
+  - Transform and validate requests/responses
+- Q: What is Lambda Proxy Integration?
+- Q: Can one "un-promote" Canary somehow?
+
+### API Gateway Endpoint Types
+
+- Edge-Optimized (default)
+  - API Gateway in one region, but requests routed through CloudFront Edge locations
+- Regional
+  - Clients in a single region.
+  - May be manually combined with CloudFront
+- Private
+  - Only accessible from your VPC (definable using Resource Policy)
+
+### API Types
+
+- HTTP API
+  - OIDC, OAuth2
+  - CORS
+  - Presents Lambda and HTTP backends
+- Websocket API
+  - Presents Lambda HTTP backends, AWS Services
+- REST API (optionally private)
+  - Finer-grained control
+  - Presents Lambda, HTTP backends, AWS Services (from any region), Mocks, and VPC Links
+  - Max timeout 29s
+  - Note: the `AWS:SourceArn` in the Resource-based policy specify the endpoint verb
+
+### API Integration Types
+
+- Mock
+- HTTP / AWS
+  - Mapping templates for both request and response
+  - Uses VTL (Velocity Template Language) -- <https://velocity.apache.org/engine/2.3/user-guide.html>, <https://en.wikipedia.org/wiki/Apache_Velocity>
+    - Can rename/modify query string params
+    - Modify body content
+    - Add headers, etc
+- AWS_PROXY (Lambda Proxy)
+  - No mapping templates, etc -- Lambda function itself handles the raw headers, etc.
+  - Request: `"resource"`, `"path"`, `"httpMethod"`, `"headers"`, `"multiValueHeaders"`, `"queryStringParameters"`, `"multiValueQueryStringParameters"`, `"pathParameters"`, `"stageVariables"`, `"requestContext"`, `"body"`, `"isBase64Encoded"`
+  - Response: `"statusCode"`, `"headers"`, `"multiValueHeaders"`, `"body"`, `"isBase64Encoded"`
+- HTTP_PROXY
+  - No mapping templates -- request passed onto a backend.
+  - Can add HTTP headers (e.g. API key)
