@@ -58,6 +58,7 @@
         "Userdata",
         "Voronoi",
         "Webapps",
+        "wscat",
         "xlarge"
     ]
 }

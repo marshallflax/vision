@@ -2182,6 +2182,8 @@
     - Modify body content, even convert JSON to XML for a SOAP backend.
     - Add headers, etc
     - Filter response
+    - Sample response mapping
+      - `#set($inputRoot=$input.path('$')) {"renamedField":$inputRoot.example}`
 - AWS_PROXY (Lambda Proxy)
   - No mapping templates, etc -- Lambda function itself handles the raw headers, etc.
   - Request: `"resource"`, `"path"`, `"httpMethod"`, `"headers"`, `"multiValueHeaders"`, `"queryStringParameters"`, `"multiValueQueryStringParameters"`, `"pathParameters"`, `"stageVariables"`, `"requestContext"`, `"body"`, `"isBase64Encoded"`
@@ -2189,3 +2191,111 @@
 - HTTP_PROXY
   - No mapping templates -- request passed onto a backend.
   - Can add HTTP headers (e.g. API key)
+
+### API Gateway -- Open API Spec
+
+- Import
+  - Method
+    - Can perform basic validation before calling backend
+    - Conformance to a specified JSON Schema -- TODO <https://json-schema.org/>
+      - Q: Who pays for validation CPU?
+      - `x-amazon-apigateway-request-validators`
+  - Method Request
+  - Integration Request
+  - Method Response
+  - AWS Extensions and options thereof
+- Export as OpenAPI spec (e.g. to generate client code)
+  - Android, Javascript, iOS (Objective-C), iOS (Swift), Java, Ruby
+- YAML or JSON
+
+### API Gateway Caching
+
+- Expensive
+- Per-stage
+- Settings per-method
+- TTL 300s (0s-3600s)
+- Max cached response: 1MiB
+- Capacity 0.5GB, 1.6GB, 6.1GB, 13.5GB, 28.4GB, 58.2GB, 118GB, and perhaps 237GB
+- Invalidate cache entry with `"Cache-Control: max-age=0"` (with IAM auth, of course)
+  - By default, _any_ client can invalidate the cache!
+
+### API Gateway -- Usage Plans and API Keys
+
+- Charging for our API!
+- API Keys, throttling (and burst), quota (per day/week/month)
+  - Q: Can a single API Key have different quotas for different endpoints?
+  - Associate API stages and API keys with a usage plan
+  - `X-API-Key` header
+    - Can sell on AWS marketplace!
+
+### API Gateway -- Logging/Tracing
+
+- CloudWatch Logs
+  - Likely to contain sensitive info
+- CloudWatch Metrics (per stage)
+  - `CacheHitCount`, `CacheMissCount`, `Count`, `IntegrationLatency` (i.e. backend latency), `Latency` (end-to-end, must be less than 29 seconds), `4XX` and `5XX`
+    - 4XX include:
+      - 400 -- Bad request
+      - 403 -- Access Denied or WAF filtered
+      - 429 -- Quota exceeded or throttled
+    - 5XX include:
+      - 502 -- Bad Gateway (perhaps Lambda returned unparseable data)
+      - 503 -- Service Unavailable
+      - 504 -- Integration Failure (including 29-second timeout)
+- X-Ray
+
+### API Gateway -- Throttling
+
+- Default 10000 requests/s across all APIs
+  - Raise a ticket to increase
+- Can set Stage limits and Method limits
+
+### API Gateway -- CORS
+
+- OPTIONS 
+  - request contains: `Origin`
+  - response contains: `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Origin`
+- Note: LAMBDA_PROXY and HTTP_PROXY need to _manually_ set the response fields
+
+### API Gateway -- Security
+
+- Authentication and Authorization via IAM -- best way from within AWS
+  - Sig v4 in HTTP headers.
+    ```Authorization: AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-date, Signature=fe5f80f77d5fa3beca038a248ff027d0445342fe2855ddc963176630326f1024`
+  - Resource Policies (especially for cross-account access)
+    - Can filters by source IP or VPC
+- Authentication: Cognito User Pools (database of users); Authorization: In your code
+- Authentication: External; Authorization: Lambda Authorizer (JWT or OAuth token, plus headers, query string, stage vars, etc)
+  - Lambda returns an IAM Principal and IAM policy for the user (and API Gateway will cache)
+
+### API Gateways
+
+- HTTP API
+  - Low-latency, cheap, no data mapping
+  - OIDC and OAuth 2.0
+  - CORS
+  - No API Keys, usage plans, resource policies
+- REST API
+  - All features except OIDC/OAuth 2.0/JWT
+- WebSocket API
+  - `npm install -g wscat` is like `curl`:w
+  - Two-way, so allows push
+  - "onConnect" Lambda function (passed a `connectionId` useful for DynamoDB to store session info)
+  - "sendMessage" Lambda function ("frames")
+  - "onDisconnect" Lambda function
+  - Works with AWS Services (Lambda, DynamoDB) or HTTP endpoints
+  - `wss://$UNIQUE_ID/execute-api.$REGION.amazonaws.com/$STAGE_NAME`
+  - API Gateway provides a callback connection UTL (`https://$UNIQUE_ID.execute-api.$REGION.amazonaws.com/$STAGE_NAME/@connections/$CONNECTION_ID`)
+    - POST -- send messages to client
+    - GET -- gets current status of the specified client
+    - DELETE -- disconnect the connected client
+  - Incoming request routing, e.g. `$request.body.action` ... if not matched, then `$default` route.
+  - Sample: <https://github.com/aws-samples/websocket-chat-application>
+
+### API Gateway Architecture
+
+- API Gateway to:
+  - S3 Bucket
+  - ELB to ECS Cluster
+  - ELB to EC2 Servers
+- Route 53 can simplify this to our users, of course
