@@ -1018,7 +1018,6 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
-
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
@@ -1027,13 +1026,10 @@
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
-
   ```mermaid
-
   graph LR
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
-
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
