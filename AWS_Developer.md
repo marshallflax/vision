@@ -170,7 +170,7 @@
 
 - Groups contain (many-to-many) users
 - Users and groups can be assigned (many-to-many) JSON policy documents (containing statements -- Effect(Allow,Deny)/Principal(account/user/role)/Action(service:method)/Resource triples)/Condition
-- Roles assign permissions to trusted entities -- AWS service (e.g., EC2 or Lambda), AWS account, Web Identity, SAML 2.0 federation, etc --  to act on our behalf.
+- Roles assign permissions to trusted entities -- AWS service (e.g., EC2 or Lambda), AWS account, Web Identity, SAML 2.0 federation, etc -- to act on our behalf.
 - Account-level IAM Credentials Report (.csv)
 - User-level IAM Access Advisor
 - Responsibility shared between AWS and account owner
@@ -1018,6 +1018,7 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
+
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
@@ -1026,11 +1027,13 @@
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
+
   ```mermaid
 
   graph LR
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
+
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
@@ -1189,9 +1192,8 @@
 
 ### CloudFormation Rollbacks
 
-- Stack Creation error 
+- Stack Creation error
   - Default is rollback, but can disable for troubleshooting
-
 - Stack Update error
   - Default is rollback to last known-working state, but can allow newly-created resources to stay (for debugging)
   - Logs are useful.
@@ -1277,7 +1279,7 @@
   - Also offers Message Filtering per subscription
     - Message attributes
     - Message body (if JSON)
-- Subscribers 
+- Subscribers
   - Email
     - Q: Can this be disabled...seems like an easy exfiltration modality
   - SMS/Mobile notifications
@@ -1303,7 +1305,7 @@
   - At-rest using KMS or AWS-managed keys
 - Policies similar to SQS and S3 Buckets
 - Examples
-  - SNS+SQS fan-out 
+  - SNS+SQS fan-out
     - SQS policy must allow SNS to write
     - Cross-region delivery is quite possible
     - Example: S3 events, since they can have one event rule per event type and prefix
@@ -1311,8 +1313,8 @@
 
 ### Kinesis Data Streams
 
-- Kinesis Data Streams - Capture, process, store 
-  - Fixed sharding defines throughput 
+- Kinesis Data Streams - Capture, process, store
+  - Fixed sharding defines throughput
     - Producer -- 1k msgs/s, 1MB/s
     - Shared Client -- 2k msgs/s, 2 MB/s (across all consumers)
       - Pull -- Usual `GetRecords()` API
@@ -1323,7 +1325,7 @@
   - Modes
     - Provisioned (pay per shard-hour)
     - On-demand (newer)
-      - Up to 200MiB/s 
+      - Up to 200MiB/s
       - Scaled based on 30d peak.
       - Pay per stream-hour and per GB
   - Producers
@@ -1449,7 +1451,7 @@
       - Synthetic metrics based on query (up to three dimensions). Not retroactive.A
       - Can trigger CloudWatch Alarm
     - Destinations
-      - Export 
+      - Export
         - S3 (CreateExportTask can take up to 12h!)
         - CloudWatch Logs Subscriptions (real-time, supports filtering)
           - Up to two subscription filters per log group (Q: Why so low?)
@@ -1463,7 +1465,7 @@
           - Kinesis Data Firehose (KDF)
             - S3 (near real-time)
             - OpenSearch
-      - CloudWatch Logs Insights 
+      - CloudWatch Logs Insights
         - Auto-detects fields from AWS services and JSON log events
         - Custom query language
           - `fields @timestamp, @messages | sort @timestamp desc | limit 20`
@@ -1476,7 +1478,7 @@
     - States: OK, INSUFFICIENT_DATA, ALARM
     - Period (length of time to evaluate metric): 10s, 30s, $$N$$ minutes
     - Actions
-      - EC2 (e.g. restarting instance) 
+      - EC2 (e.g. restarting instance)
       - EC2 Auto Scaling
       - Amazon SNS
       - Composite Alarms! (AND, OR)
@@ -1498,7 +1500,7 @@
     - Policies
       - Can aggregate events from other accounts and/or regions.
     - Sandbox
-    - Sources 
+    - Sources
       - Scheduled (cron)
       - Typical Events (may be filtered)
         - IAM -- root user sign-in
@@ -1527,7 +1529,7 @@
   - Enabling
     - Java/Python/Go/Node.js/.NET -- import the X-Ray SDK (and minimal code modification)
       - `AWS_XRAY_DAEMON_ADDRESS` tells the SDK where to publish to (typically port UDP 2000)
-      - X-Ray daemon (intercepting UDP) 
+      - X-Ray daemon (intercepting UDP)
       - Manually identify segment boundaries, etc
     - Lambda
       - X-Ray must be imported and "Active Tracing" enabled
@@ -1591,7 +1593,7 @@
   - Author from scratch
   - Use a blueprint
   - Container image
-  - Browse repo  
+  - Browse repo
 
 ### Lambda -- Synchronous
 
@@ -1627,7 +1629,7 @@
   - CloudWatch EventBridge
   - CodeCommit
   - CodePipeline
-  - CloudWatch Log, 
+  - CloudWatch Log,
   - Simple Email Service
   - CloudFormation
   - AWS Config
@@ -1646,7 +1648,7 @@
 
 ### Lambda -- Event Source Mapping (synch)
 
-- Polling 
+- Polling
   - Streams (Kinesis Data Streams and DynamoDB Streams)
     - One iterator for each shard, and parallel up to ten batches per shard (respecting partition keys)
     - Start from: (1) the beginning, (2) from a timestamp, or (3) only new items.
@@ -1662,7 +1664,7 @@
       - Or invoke a 2nd lambda for failures
     - For standard queues, retries will likely be in totally different batches than before
       - Single element might be processed twice, even if there's no error
-    - Scaling 
+    - Scaling
       - SQS -- Lambda adds up to 60 more instances per minute (up to 1000 simultaneous batches) for scaling
       - SQS Fifo -- Lambda scales to the number of active message groups
     - `AWSLambdaSQSQueueExecutionRole` (aws-managed)
@@ -1701,12 +1703,12 @@
 
 - CloudWatch Logs -- enabled by default
 - CloudWatch Metrics -- Invocations, durations, concurrent executions, error count, success rates, throttling, async delivery failures, iterator age (streams)
-- X-Ray tracing 
+- X-Ray tracing
   - Enable "Active Tracing"
   - Grant AWSXRayDaemonWriteAccess
   - Use X-Ray SDK
-  - Environment variables 
-    - `_X_AMZN_TRACE_ID`  (tracing header)
+  - Environment variables
+    - `_X_AMZN_TRACE_ID` (tracing header)
     - `AWS_XRAY_CONTEXT_MISSING` (default `LOG_ERROR`)
     - `AWS_XRAY_DAEMON_ADDRESS` (IP:PORT)
 
@@ -1736,9 +1738,9 @@
     - URL rewrites/redirects
     - Create/validate user-generated tokens (e.g. JWT -- JSON Web Tokens)
   - Lambda@Edge
-    - >1ms allowed
+    - > 1ms allowed
     - Access to HTTP message body allowed
-    - CPU, Memory, AWS SDK, File Systems, 
+    - CPU, Memory, AWS SDK, File Systems,
   - Website security/privacy
   - Dynamic Webapps at the Edge
   - SEO
@@ -1931,7 +1933,7 @@
   - DynamoDB stream
   - Replication Regions
 - Modes
-  - Eventually-consistent read (default) vs strongly-consistent read 
+  - Eventually-consistent read (default) vs strongly-consistent read
     - Set `ConsistentRead` in API calls (`GetItem`, `BatchGetItem`, `Query`, `Scan`)
     - Higher latency and consumes twice the RCU
   - Transactional
@@ -1977,12 +1979,12 @@
     - Default: Eventually-Consistent Read
     - `ProjectionExpression` -- retrieve only some attributes
   - `Query`
-    - `KeyConditionExpression` 
+    - `KeyConditionExpression`
       - Mandatory: Exact match on partition key value
       - Optional: Inequalities and "beginsWith" on the sort key value
     - `FilterExpression` (optional)
       - Non-key attributes
-    - `Limit` 
+    - `Limit`
       - Max number of records to return
       - (Also limited to 1MB of data)
       - Pagination supported
@@ -1996,7 +1998,7 @@
   - `DeleteTable`
     - Far cheaper than one-by-one `DeleteItem`
   - (Batching available and performed in parallel, but partial success is possible)
-    - `BatchWriteItem` 
+    - `BatchWriteItem`
       - Up to 25 `PutItem` and/or `DeleteItem` -- but _not_ `UpdateItem`
       - Up to 16MB data in total; up to 400K per item
       - Returns `UnprocessedItems` list -- backoff or add WCU
@@ -2026,7 +2028,7 @@
     - Grant Lambda IAM permissions to read from underlying DynamoDB table
       - `AWSLambdaDynamoDBExecutionRole`
         - "dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator", "dynamodb:ListStreams"
-        - "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" 
+        - "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"
       - `AmazonDynamicDBReadOnlyAccess`
         - Lots more -- <https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonDynamoDBReadOnlyAccess.html>
     - Choose batch size (1-10000)
@@ -2084,7 +2086,7 @@
   - Option (slow) -- Scan and DeleteItem
   - Option (faster) -- Drop-and-recreate
 - Table duplication
-  - Option -- AWS Data Pipeline can use an EMR (Elastic MapReduce) Cluster to read from DynamoDB and write to S3.  Then read from S3 and write to a second DynamoDB table.
+  - Option -- AWS Data Pipeline can use an EMR (Elastic MapReduce) Cluster to read from DynamoDB and write to S3. Then read from S3 and write to a second DynamoDB table.
   - Option -- Backup-and-restore (can take some time)
   - Option -- Write code and do Scan + BatchWriteItem
 
@@ -2107,7 +2109,7 @@
   - Get temporary AWS credentials from an identity provider
     - Amazon Cognito Identity Pools (authorization)
       - Amazon Cognito User Pools (identification)
-    - Web Identity Federation 
+    - Web Identity Federation
       - Google, Facebook, OpenID Connect, SAML
   - `"Condition":"ForAllValues:StringEquals":"dynamodb:LeadingKeys":["${cognito-identity.amazonaws.com:sub}"]`
 
@@ -2181,8 +2183,9 @@
   - Mapping templates for both request and response
   - Uses VTL (Velocity Template Language) -- <https://velocity.apache.org/engine/2.3/user-guide.html>, <https://en.wikipedia.org/wiki/Apache_Velocity>
     - Can rename/modify query string params
-    - Modify body content
+    - Modify body content, even convert JSON to XML for a SOAP backend.
     - Add headers, etc
+    - Filter response
 - AWS_PROXY (Lambda Proxy)
   - No mapping templates, etc -- Lambda function itself handles the raw headers, etc.
   - Request: `"resource"`, `"path"`, `"httpMethod"`, `"headers"`, `"multiValueHeaders"`, `"queryStringParameters"`, `"multiValueQueryStringParameters"`, `"pathParameters"`, `"stageVariables"`, `"requestContext"`, `"body"`, `"isBase64Encoded"`
