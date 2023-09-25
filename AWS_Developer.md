@@ -41,8 +41,6 @@
 - Serialization/deserialization
 - Data life-cycles
 
----
-
 ### Domain 2 -- Security
 
 #### Task 1 -- Authentication and Authorization
@@ -65,8 +63,6 @@
 - Secrets management -- AWS Secrets Manager, AWS Systems Manager Parameter Store
 - Credential handling
 - Sanitization
-
----
 
 ### Domain 3 -- Deployment
 
@@ -105,8 +101,6 @@
 - API Gateway -- stages, custom domains
 - Strategies -- canary, blue/green, rolling, rollbacks, dynamic deployments
 
----
-
 ### Domain 4 -- Troubleshooting and Optimization
 
 #### Task 1 -- Root Cause
@@ -127,8 +121,6 @@
 
 - Caching (using request headers), concurrency, messaging (Simple Queue Service, Simple Notification Service, filtering)
 - Profiling -- determining memory and compute requirements
-
----
 
 ### Scope
 
@@ -258,8 +250,6 @@
 ### Amazon Machine Image (AMI)
 
 - Amazon Linux is free-tier-eligible
-
----
 
 ## Block Storage
 
@@ -2252,10 +2242,10 @@
 
 ### API Gateway -- CORS
 
-- OPTIONS 
+- OPTIONS
   - request contains: `Origin`
   - response contains: `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Origin`
-- Note: LAMBDA_PROXY and HTTP_PROXY need to _manually_ set the response fields
+- Note: `LAMBDA_PROXY` and `HTTP_PROXY` need to _manually_ set the response fields
 
 ### API Gateway -- Security
 
@@ -2322,8 +2312,8 @@
     - Alternatives
       - Jenkins CI
       - CodeBuild Local Build (for deep troubleshooting) -- requires Docker and CodeBuild Agent
-    - `buildspec.yml` (in project root)
-      - `env` 
+    - `buildspec.yml` (in project root by default)
+      - `env`
         - `variables` (plaintext, e.g. `JAVA_HOME`)
         - `parameter-store` (SSM (systems manager) Parameter Store)
         - `secrets-manager` (AWS Secrets Manager)
@@ -2344,6 +2334,7 @@
     - Resulting artifacts in an S3 bucket
     - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
       - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
+      - Q: How do I manually run integration tests on a dev branch?
   - AWS Elastic Beanstalk
     - Alternatives: CodeDeploy to EC2, Lambda, ECS, or on-prem
   - CodePipeline -- Orchestrate the above via S3 artifacts
@@ -2371,7 +2362,6 @@
       - Note: Actions are performed in parallel; action groups are performed sequentially
         - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
         - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
-
 - CodeGuru (automated code reviews using ML)
 - CodeArtifact (build and publish software packages)
 - CodeStar (management of the above)
