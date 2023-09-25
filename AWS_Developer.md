@@ -2330,6 +2330,7 @@
     - Build stats in CloudWatch Metrics
     - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
       - Or provide your own Docker container.
+    - Can run integration tests
     - Can optionally store reusable artifacts in an S3 bucket
     - Resulting artifacts in an S3 bucket
     - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
