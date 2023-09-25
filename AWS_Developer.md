@@ -2319,12 +2319,59 @@
       - Lambda
       - Q: Also AWS Chatbot (Slack)?
   - CodeBuild (building and testing)
-    - Alternatives: Jenkins CI
+    - Alternatives
+      - Jenkins CI
+      - CodeBuild Local Build (for deep troubleshooting) -- requires Docker and CodeBuild Agent
+    - `buildspec.yml` (in project root)
+      - `env` 
+        - `variables` (plaintext, e.g. `JAVA_HOME`)
+        - `parameter-store` (SSM (systems manager) Parameter Store)
+        - `secrets-manager` (AWS Secrets Manager)
+      - `phases`
+        - `install`, e.g. `apt-get update && apt-get install -y maven` Q: Why not in the image?
+        - `pre-build`, e.g. `docker login`
+        - `build`, e.g. `mvn install`
+        - `post-build`, e.g. packing artifacts
+      - `artifacts`
+        - `files`, e.g. which artifacts toA upload to S3
+      - `cache`
+        - `paths`, e.g. `"/root/.m2/**/*"`
+    - Output logs in S3 or CloudWatch Logs
+    - Build stats in CloudWatch Metrics
+    - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
+      - Or provide your own Docker container.
+    - Can optionally store reusable artifacts in an S3 bucket
+    - Resulting artifacts in an S3 bucket
+    - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
+      - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
   - AWS Elastic Beanstalk
     - Alternatives: CodeDeploy to EC2, Lambda, ECS, or on-prem
   - CodePipeline -- Orchestrate the above via S3 artifacts
     - Runs using a service role
-    - Trigger CloudWatch Events (Amazon EventBridge)
+    - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
+    - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, etc
+    - Stage -- Mandatory "Deploy Provider"
+      - CloudFormation
+      - CloudDeploy
+      - Elastic Beanstalk
+      - Service Catalog (Q:???)
+      - ECS
+      - ECS (Blue/Green)
+      - S3
+    - Triggered by either:
+      - CloudWatch Events (recommended)
+        - Can be triggered by a _GitHub App_ -- "CodeStar Source Connection"
+      - Webhooks (older)
+      - Polling for changes
+    - Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
+      - Manual-approval steps
+        - Optional SNS topic
+        - Optional URL giving context to the reviewer
+        - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
+      - Note: Actions are performed in parallel; action groups are performed sequentially
+        - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
+        - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
+
 - CodeGuru (automated code reviews using ML)
 - CodeArtifact (build and publish software packages)
 - CodeStar (management of the above)

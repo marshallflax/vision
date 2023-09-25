@@ -10,6 +10,7 @@
         "AWSX",
         "Binpack",
         "boto",
+        "buildspec",
         "canaried",
         "canarying",
         "checkpointed",
