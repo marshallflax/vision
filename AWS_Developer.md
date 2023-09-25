@@ -2336,7 +2336,40 @@
       - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
       - Q: How do I manually run integration tests on a dev branch?
   - AWS Elastic Beanstalk
-    - Alternatives: CodeDeploy to EC2, Lambda, ECS, or on-prem
+    - Alternative: CodeDeploy
+      - Controlled by `appspec.yml`
+        - `files` -- list of source/destination pairs
+        - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
+          - List of tuples -- script `location`, `timeout`, `runas`
+      - Targets:
+        - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
+          - Depends upon each EC2 instance having a tag identifying its environment
+          - Q: Why isn't codedeploy-agent installable as a yum package???
+          - EC2 instances must have authorization to access deployment bundles in S3
+        - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
+          - In-place deployment
+          - Blue/Green -- new ASG created
+            - ELB mandatory
+            - Choose how long to retail old ASG (and EC2 instances thereof)
+        - Lambda functions
+          - Traffic shift integrated within SAM (Serverless Application Model) framework
+          - Simply changes the percentages for the PROD (or whatever) alias.
+            - `LambdaLinear10PercentEvery3Minutes`
+            - `LambdaLinear10PercentEvery10Minutes`
+            - `LambdaCanary10Percent5Minutes` (and then 100%)
+            - `LambdaCanary10Percent30Minutes` (and then 100%)
+            - `AllAtOnce`
+        - ECS Platform
+          - Only Blue/Green deployments; switch occurs in ALB
+          - `ECSLinear10PercentEvery3Minutes`
+          - `ECSLinear10PercentEvery10Minutes`
+          - `ECSCanary10Percent5Minutes` (and then 100%)
+          - `ECSCanary10Percent30Minutes` (and then 100%)
+          - `AllAtOnce`
+        - On-prem
+      - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
+      - Automated rollback
+        - Rollbacks are a _new_ deployment to a last known-good revision
   - CodePipeline -- Orchestrate the above via S3 artifacts
     - Runs using a service role
     - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
@@ -2359,9 +2392,34 @@
         - Optional SNS topic
         - Optional URL giving context to the reviewer
         - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
-      - Note: Actions are performed in parallel; action groups are performed sequentially
-        - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
-        - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
-- CodeGuru (automated code reviews using ML)
+      - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
+    - Note: Actions are performed in parallel; action groups are performed sequentially
+      - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
+      - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
+- CodeStar (management of the above, but EOL is 2024-07 -- to be replaced by CodeCatalyst)
+  - Unitary dashboard, but limited customization
+  - Lots of templates, e.g. C#, Go, HTML5, Java, Node.js, PHP, Python, Ruby
+    - For example, Express.js has Lambda, Elastic Beanstalk, and EC2 templates
+  - Issue tracking with JIRA or GitHub
+  - Cloud9 web IDE (most regions)
 - CodeArtifact (build and publish software packages)
-- CodeStar (management of the above)
+  - Artifact management
+    - Domains contain Repositories
+      - Resource policies are per-repo not per-artifact
+      - Deduplication within an entire domain (sharing a single KMS key)
+    - Proxies up to ten public artifact repos (e.g. npm, Maven)
+      - Network security, caching (but not intermediate repos)
+  - Events to EventBridge
+  - Integrates with Maven, Gradle, npm, yarn, twine (Python), pip (Python), NuGet (.NET)
+- CodeGuru (automated code reviews using ML)
+  - CodeGuru Reviewer
+    - Currently Java and Python
+    - Integrates with BitBucker, GitHub, and AWS CodeCommit
+  - CodeGuru Profiler
+    - Requires Agent
+      - `MaxStackDepth`, `MemoryUsageLimitPercent`, `MinimumTimeForReportingInMilliseconds`, `ReportingIntervalInMilliseconds`, `SamplingIntervalInMilliseconds`
+    - Application performance recommendations
+    - AWS or on-prem
+    - Minimum overhead
+- AWS Cloud9 (Cloud-based IDE)
+  - Each Cloud9 environment requires an EC2 instance (type can't be changed after creation)
