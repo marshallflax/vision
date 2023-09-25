@@ -2299,3 +2299,32 @@
   - ELB to ECS Cluster
   - ELB to EC2 Servers
 - Route 53 can simplify this to our users, of course
+
+## AWS CI/CD
+
+- CodeSuite
+  - CodeCommit -- private Git repos, Minimal UI
+    - Alternatives: GitHub or Bitbucket
+    - Authentication
+      - SSH Keys (not available for root IAM user)
+      - HTTPS
+        - AWS CLI Credential Helper
+        - Git Credentials for IAM user
+        - HTTPS(GRC) for `git-remote-codecommit`
+    - Authorization -- IAM policies
+      - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
+    - Encryption -- KMS available
+    - Notifications
+      - SNS topic
+      - Lambda
+      - Q: Also AWS Chatbot (Slack)?
+  - CodeBuild (building and testing)
+    - Alternatives: Jenkins CI
+  - AWS Elastic Beanstalk
+    - Alternatives: CodeDeploy to EC2, Lambda, ECS, or on-prem
+  - CodePipeline -- Orchestrate the above via S3 artifacts
+    - Runs using a service role
+    - Trigger CloudWatch Events (Amazon EventBridge)
+- CodeGuru (automated code reviews using ML)
+- CodeArtifact (build and publish software packages)
+- CodeStar (management of the above)
