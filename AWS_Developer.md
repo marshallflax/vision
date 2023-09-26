@@ -2519,3 +2519,97 @@
   - Fine-grained assertionsA
   - Snapshot Tests -- compares against a baseline
 - Can also compare against a CloudFormation template file itself (`Template.fromString()`)
+
+## Cognito -- User Pools for authentication and Identity Pools for authorization
+
+- Cognito User Pools (CUP)
+  - Sign-in functionality for app users
+  - Integrates with API Gateway and ALB
+  - Serverless user database
+    - MFA, email/phone verification
+    - Adaptive Authentication -- block sign-in or require MFA
+      - Also checks for compromised credentials
+      - Integration with CloudWatch Logs
+  - Federated Identities -- Amazon, Facebook, Google, SAML, OpenID Connect
+  - Block users with compromised credentials
+  - Provides a JWT (JSON Web Token)
+    - Base64
+    - Header
+    - Payload
+      - `sub` -- UserID in CognitoDB
+      - `email` and `email_verified`
+      - `cognito:{username,groups,roles,preferred_role}`
+      - `iss`
+      - `nonce`
+      - `jti`, `origin-jti` (token identifier)
+      - `aud`
+      - `event_id`
+      - `token_use` ("id")
+      - `auth_time`, `exp`, `iat` (issued-at time)
+    - Signature
+  - Doesn't appear to support "correct horse battery staple"
+  - Email from Cognito itself (<50/day, just for testing)
+  - Email from SES (requires verifying identity)
+  - Optionally provides UI for sign-up, sign-in, Oath 2.0
+    - Domain can be AWS-owned 
+    - Domain can be custom DNS domain (recommended for production)
+      - Defined in "App Integration"
+      - ACM certificate in `us-east-1`
+  - Lambda triggers (synchronous; up to one per type)
+    - Sign-up
+      - Pre-sign-up
+      - Post-confirmation
+      - Migrate user trigger
+    - Authentication
+      - Pre-authentication (perhaps deny login)
+      - Post-authentication  (logging/analytics)
+      - Pre-token-generation (add/remove token attributes)
+    - Custom authentication (e.g. CAPTCHA or security question)
+      - Define auth challenge
+      - Create auth challenge
+      - Verify auth challenge
+    - Messaging
+      - Custom message trigger
+
+### Cognito Identity Pools (Federated Identity)
+
+- Provides temporary AWS credentials
+  - More users than IAM supports
+  - IAM policies allow access to API Gateway or AWS services itself
+- Allows identities from
+  - Social providers
+  - Cognito User Pool
+    - Allows "guest"
+  - OpenIDConnect and SAML providers
+  - Custom login server (Developer Authenticated Identities)
+- Gets temp credentials from Security Token Service (STS) service
+- Default IAM role for guests and authenticated users
+  - Rules to determine role based on userID
+  - Partition access using `policy variables`
+    - Resources can be per-user, e.g. `"Resource": ["arn:aws:s3:::myBucket/${cognito-identity.amazonaws.com:sub}/*"]`
+      - Ditto for `"dynamodb:LeadingKeys"`
+- `sts:TagSession` -- TODO <https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html>
+- Steps:
+  - Import AWS SDK
+  - Authenticate
+  - Register identity and retrieve AWS credentials
+  - Use credentials
+
+### ALB Authentication
+
+- Options
+  - Cognito User Pools
+    - Social IdPs (Amazon, Facebook, Google, Apple, Twitter)
+    - Corporate identities (SAML, LDAP, or Microsoft AD)
+  - Identity Provider (IdP) -- must be OpenID Connect (OIDC) compliant
+    - Need Authentication Endpoint, Token Endpoint, User Info Endpoint
+- Requires HTTPS listener with `authenticate-oidc` or `authenticate-cognito`
+- Define `OnUnauthenticatedRequest`
+  - "authenticate" (default)
+  - "deny"
+  - "allow" (e.g. for Login page)
+- Cognito User Pools
+  - Create User Pool, Client, DOmain
+  - Ensure ID tokens are returned (default)
+  - Add social/corporate IdP
+  - Permission callback URLs (e.g. `https://$DOMAIN_PREFIX.auth.$REGION.amazoncognito.com/saml2/idresponse` or `https://$USER_POOL_DOMAIN/oauth2/idpresonse`)
