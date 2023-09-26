@@ -2613,3 +2613,98 @@
   - Ensure ID tokens are returned (default)
   - Add social/corporate IdP
   - Permission callback URLs (e.g. `https://$DOMAIN_PREFIX.auth.$REGION.amazoncognito.com/saml2/idresponse` or `https://$USER_POOL_DOMAIN/oauth2/idpresonse`)
+
+## AWS Step Functions
+
+- One state machine per workflow
+  - Workflows initialized with an input document
+  - Order fulfillment, data processing, etc
+- State machine defined as a JSON document
+- Workflow triggered by SDK call, API Gateway, Event Bridge (CloudWatch Event)
+- Tasks
+  - Invoke a Lambda function
+  - Run an AWS Batch job
+  - Synchronously run an ECS task
+  - Insert into DynamoDB
+  - Publish to SNS or SQS
+  - Launch a 2nd Step Function workflow
+  - Or we may run a server (EC2, ECS, on-prem) which polls for step-function work and sends results back
+    - Poll: `GetActivityTask`
+    - Response: `SendTaskSuccess`, `SendTaskFailure`
+    - Still working: `SendTaskHeatBeat` (up to 1 year!!!)
+- States
+  - Choice state (conditional)
+  - Terminal (success or failure)
+  - Pass data (no-op, but perhaps inject fixed data)
+  - Wait (duration or point in time)
+  - Map State (iterate along collection)
+  - Parallel state (fork)
+- Error handling
+  - `Retry` -- Optional exponential-backoff retry
+    - Separate strategies for different errors
+    - Transition to `Catch` once all retries fail
+  - `Catch` -- Transition to new state
+    - `"ResultPath": "$.error"` adds error info into the JSON passed to the next state
+  - Errors include: `States.{Timeout,TaskFailed,Permissions}` (and custom errors).
+    - `States.ALL` matches any error
+- Side note:
+  ```javascript
+  exports.handler = async (event,context) => {
+    function MyError(msg) {this.name = 'MyError'; this.message=msg;}
+    MyError.prototype = new Error();
+    throw new MyError("I don't like this")
+  };
+  ```
+- ```javascript
+  {"Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+   "Parameters": {
+    "QueueUrl": "https://sqs.$REGION.amazonaws.com/$ACCT/MyQueue",
+    "MessageBody": {
+      "Input.$": "$",
+      "TaskToken.$": "$$.Task.Token"}}}
+  ```
+  - And then the resource calls `SendTaskSuccess` (or `SendTaskFailure`) with the taskToken and an output.
+- Standard
+  - Up to 1y for entire workflow, up to 2k/s, exactly-once, 90d history
+    - Priced per state transition
+    - Suitable for non-idempotent
+- Express
+  - Best if steps are idempotent
+  - Workflows only up to 5m, but up to 100k/s. Only CloudWatch history
+    - Priced per executions, duration, memory
+  - Asynchronous -- at least once
+    - Fire-and-forget
+  - Synchronous -- at most once
+
+## AppSync -- Managed GraphQL
+
+- Can join data from multiple sources
+  - NoSQL, RDBMS, HTTP APIs
+  - DynamoDB, Aurora, OpenSearch, etc
+  - Lambda
+- Real-time data with WebSocket or MQTT
+  - Supersedes "Cookie to Sync"
+- Mobile apps: local data access and data sync
+- Driven by a GraphQL schema
+- Authorized by
+  - API_KEY
+  - AWS_IAM
+  - OPENID_CONNECT (JWT)
+  - AMAZON_COGNITO_USER_POOLS
+- Works well behind CloudFront https termination
+- Optional caching
+
+## AWS Amplify
+
+- Amplify -- "Elastic beanstalk for mobile and web"
+  - Frontend
+    - Amplify Studio
+    - Amplify CLI
+  - Backend
+    - Amplify Libraries
+      - React.js, Vue, JS, iOS, Android, Flutter, ...
+    - Amplify Hosting (CDN)
+    - DynamoDB, Cognito, S3
+  - E2E testing in the "test phase"
+    - `amplify.yml`
+    - <https://www.cypress.io/>
