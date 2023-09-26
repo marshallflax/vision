@@ -2424,3 +2424,98 @@
     - Minimum overhead
 - AWS Cloud9 (Cloud-based IDE)
   - Each Cloud9 environment requires an EC2 instance (type can't be changed after creation)
+
+## SAM (Serverless Application Model)
+
+- Simple YAML generating lots of CloudFormation
+- Uses CodeDeploy to deploy Lambda functions
+- Allows running locally: Lambda, API Gateway, DynamoDB
+  - `sam local start-lambda` or `sam local invoke` (with `--profile`)
+  - `sam local start-api`
+  - `sam local generate-event`
+- Recipes
+  - `AWSTemplateFormatVersion: '2010-09-09'`
+  - `Transform: 'AWS::Serverless-2016-10-31'`
+  - Code
+    - `AWS::Serverless::Function`
+    - `AWS::Serverless::Api`
+    - `AWS::Serverless::SimpleTable`
+  - Package/deploy
+    - `aws sam build` 
+      - Creates CloudFormation Template and application code
+    - `aws sam package` (`aws cloudformation package`)
+      - Stores zip into S3 bucket
+    - `aws sam deploy` (`aws cloudformation deploy`)
+      - Creates/executes CloudFormation ChangeSet
+        - Lambda, API Gateway, DynamoDB
+- SAM CLI allows running local build/test/debug apps (requires Docker, of course)
+  - Supports Cloud9, VSCode, JetBrains, PyCharm, Intelli
+  - `sam init --runtime` -- `python`, `nodejs`, `dotnetcore`, `dotnet`, `go`, `java` (and versions thereof)
+    - Also specify `--location` for the template (perhaps even a `gh` (GitHub) file)
+- Layout
+  - `template.yaml` 
+    - Can define Lambda handlers and then one or more Api `Events` which map to it.
+    - DynamoDB tables of type `AWS::Serverless::SimpleTable` (can set ProvisionedThroughput and ServerSideEncryption (SSE) as needed)
+      - PrimaryKey
+      - Lambda function can have a `DynamoDBCrudPolicy` with a TableName of `!Ref TableNameParameter`
+    - Environment variables can be `!Ref` to other resources, or stuff like `!Ref AWS::Region`
+
+### SAM -- DynamoDB
+
+- Python: `import boto3, json, os; dynamo = boto3.client('dynamodb', region_name=os.environ['REGION_NAME']); table_name = os.environ['TABLE_NAME']; # outside handler`
+
+### SAM Policy Templates
+
+- <https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html>, e.g. `S3ReadPolicy`, `SQSPollerPolicy`, `DynamoDBCrudPolicy`
+  - `Policies:[SQSPollerPolicy:QueueName:!GetAtt MyQueue.QueueName]`
+
+### SAM and CodeDeploy (traffic shifting)
+
+- `AutoPublishAlias: live`
+- `DeploymentPreference`
+  - `Type: Canary10Percent10Minutes`
+  - `Alarms: [!Ref AliasErrorMetricGreaterThanZeroAlarm, !Ref LatestVersionErrorMetricGreaterThanZeroAlarm]`
+  - `Hooks:PreTraffic: !Ref PreTrafficLambdaFunction`
+  - `Hooks:PostTraffic: !Ref PostTrafficLambdaFunction`
+
+### Serverless Application Repository (SAR)
+
+- Share SAM-packaged apps publicly or amongst specified accounts
+  - `sam publish`
+- `MetaData:"AWS::ServerlessRepo::Application":{Name,Description,Author,SemanticVersion}`
+
+## AWS Cloud Development Kit (CDK)
+
+- Define cloud infrastructure using code -- TypeScript, Python, Java, .NET
+- Emits CloudFormation templates (JSON/YAML)
+- Can deploy infrastructure and runtime together
+  - Lambda
+  - Docker (ECS/EKS)
+- CDK vs SAM
+  - SAM -- Serverless-focused
+  - CDK -- All AWS services
+- SAM CLI can locally test CDK
+  - `csk synth && sam invoke -t MyStack.template.json myFunction`
+- `npm install -g aws-cdk-lib; cdk init app --language $CDK_LANGUAGE`
+- `cdk ls`
+- `cdk bootstrap` (once per account per region) -- Creates a "CDKToolkit" CloudFormation stack
+- `cdk synth` -- creates the actual CF template
+- `cdk diff` -- Local CDK vs deployed stack
+- `cdk deploy` -- Lots of magic
+- `cdk destroy` -- Be careful!
+
+### CDK -- Constructs
+
+- Single AWS resource or group of related resources
+- AWS Construct Library (but also Construct Hub from 3rd parties)
+  - L1 -- CFN Resources (directly available) `new s3.CfnBucket(this, "MyBucket", {bucketName: "MyBucket"})`
+  - L2 -- Higher-level (intent-based API, with convenient defaults and boilerplate) `const bucket=new s3.Bucket(this, 'MyBucket', {versioned:true, encryption: s3.BucketEncryption.KMS}); const url=bucket.urlForObject("MyBucket/MyObject"); bucket.addLifeCycleRule());`
+  - L3 -- Patterns
+    - `aws-apigateway.LambdaRestApi` is an Lambda function wrapped by an API Gateway
+
+### CDK -- Testing
+
+- CDK Assertions Module
+  - Fine-grained assertionsA
+  - Snapshot Tests -- compares against a baseline
+- Can also compare against a CloudFormation template file itself (`Template.fromString()`)
