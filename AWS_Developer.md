@@ -134,7 +134,7 @@
 - Developer -- Amplify, Cloud9, CloudShell, CodeArtifact, CodeBuilt, CodeCommit, CodeDeploy, CodeGuru, CodePipeline, CodeStar, CodeWhisperer, X-Ray
 - Management/Governance -- AppConfig, CLI, Cloud Development Kit, CloudFormation (CDK), CloudTrail, CloudWatch, CloudWatch Logs, System Manager
 - Networking -- API Gateway, CloudFront, Elastic Load Balancing (ELB), Route 53, VPC
-- Security/Identity/Compliance -- Certificate manager (ACM), Cognito, IAM, Key Management Service (KMS), Private Cert Authority, Secrets Manager, Security Token Service (STS), WAF
+- Security/Identity/Compliance -- Certificate manager (ACM), Cognito, IAM, Key Management Service (KMS), Private Cert Authority, Secrets Manager, Security Token Service (STS), Web Application Firewall (WAF ... before ALB, CloudFront, or API Gateway)
 - Storage -- Elastic Block Store (EBS), Elastic File System (EFS), S3, S3 Glacier
 
 #### Features out of scope
@@ -273,6 +273,12 @@
   - Security Groups are for a specific region/VPC (Virtual Private Cloud) combination
   - Permitting another SG really permits EC2 instances with the other SG.
   - 21 (FTP), 3389 (RDP)
+    | Security Group | Network ACL |
+    | ------------------ | ------------------------------------------------ |
+    | Per instance | Entire subnet (additional layer of defense) |
+    | Only ALLOW | ALLOW and DENY |
+    | Looks at all rules | Lowest-number matching rule applies |
+    | Stateful | Stateless. Must explicitly allow return traffic. |
 
 ### Instance types (<https://instances.vantage.sh/>)
 
@@ -414,7 +420,7 @@
   - Integrated with AWS load balancers, which can restart unhealthy instances
 - Launch Template
   - AMI
-  - EC2 User Data (script)
+  - EC2 User Data (script running as root)
   - EBS Volumes
   - Security Groups
   - SSH Keys
@@ -565,7 +571,7 @@
 
 - Tier 1 -- Public subnet -- ELB
 - Tier 2 -- Private subnet -- Autoscaling group with one subnet per AZ (Linux, Apache, PHP)
-- Tier 3 -- Data subnet -- EBS, EFS, ElastiCache, RDS (MySQL)
+- Tier 3 -- Data subnet -- EBS, EFS, ElastiCache, RDS (MySQL, Aurora), DynamoDB
 
 ## S3 (Simple Storage Service)
 
@@ -591,7 +597,7 @@
       - Condition, e.g. `"Null"`, `"StringEquals"`, `"ArlLike"`, `"ForAllValues:StringNotEquals"` with parameters, `"s3:x-amz-server-side-encryption-aws-kms-key-id": "true"`, `"s3:x-amz-acl": ["public-read"]`, `"aws:SourceArn": "arn:aws:s3:::EXAMPLE-SOURCE-BUCKET"`, or `"aws:PrincipalServiceNamesList": "logging.s3.amazonaws.com"`
     - Can mandate encryption
     - Can be prevented from granting access to public, even for the entire account
-  - Object ACL
+  - Object ACL (only when specific objects need special protection)
   - Bucket ACL (uncommon)
 
 ### S3 Versioning
@@ -608,7 +614,7 @@
   - Only objects created after replication enabled; S3 Batch Replication for existing objects.
   - Deletion replication is optional; permanent deletions blocked
 - Same-region (SRR) and Cross-region (CRR)
-  - May apply to all objects in bucket, or whose which pas a filter
+  - May apply to all objects in bucket, or whose which pass a filter
   - Target can have different ownership, storage class, encryption, etc.
   - RTC (Replication Time Control) does 99.99% within 15m -- but more USD
   - Cloudwatch metrics available -- but more USD
@@ -725,7 +731,7 @@
 ### S3 Object Encryption
 
 - In transit
-  - Use https, duhA
+  - Use https, duh
   - Can be enforced by Denying traffic with `aws:SecureTransport` of `false`
 - Server-Side Encryption
   - (Default) SSE-S3 -- Keys managed by S3
@@ -752,12 +758,13 @@
 - Logged to a 2nd (to avoid infinite loops) S3 bucket in same region
   - BucketOwner, Bucket, Time, IP, Requestor, RequestID, Operation (SOAP.op, REST.method.resource_type, WEBSITE.method.resource_type, BATCH.DELETE.OBJECT, S3.action.resource_type), Key (object name), RequestURI, HTTPStatus, S3ErrorCode, BytesSent, ObjectSize, TotalTime, S3Time, Referrer, UserAgent, VersionId, HostId, SignatureVersion, CipherSuite, AuthType, HostHeader, TLSVersion, AccessPointARN, AclRequired
 
-### CORS (browser-based) and CSRF (server-based)
+### S3 CORS (browser-based) but not CSRF (server-based)
 
 - "Origin" -- protocol + domain + port
 - Browser blocks traffic to second site unless second site has a matching Access-Control-Allow-Origin response to a preflight request
 - Remember: S3's API is mostly just GET
-- CORS Policy -- JSON document with Allowed{Headers,Methods,Origins} and MaxAgeSeconds
+- CORS Policy -- JSON or XML document with Allowed{Headers,Methods,Origins} and MaxAgeSeconds
+  - Can also ExposeHeaders
 
 ### S3 Access Points
 
@@ -766,9 +773,11 @@
 - VPC
   - VPC Endpoint needs to have s3:GetObject rights to both the bucket and the access point
 
-### S3 Object Lambda
+### S3 Object Lambda Access Point
 
 - Useful for redaction, enriching, and/or watermarking
+- Transforms GET/LIST data
+- Requires a supporting access point
 
 ## EC2 Instance Metadata Service -- IMDS
 
@@ -787,7 +796,7 @@
 - Protection
   - DDoS protection with Shield
   - (Optional) Web Application Firewall (WAF)
-- Origins
+- Origins (supports multiple simultaneously)
   - S3
     - CloudFront Origin Access Control (OAC)
       - (Replaces Origin Access Identity (OAI))
@@ -796,6 +805,7 @@
     - ALB (Application Load Balancer)
     - EC2 instance
     - S3 static website
+  - "Behaviors" define which endpoints go to which origins
 - "Distribution" options
   - Optionally compress all objects
   - Supports
@@ -812,6 +822,11 @@
     - North America, Europe
   - Logging to an S3 bucket
 
+### Global Accelerator
+
+- Two global static public IPs
+- Traffic automatically routed to nearest healthy endpoint
+
 ### CloudFront Caching
 
 - CreateInvalidation API (all files or a path)
@@ -824,9 +839,9 @@
 ### CloudFront Signed URLs / Signed Cookies
 
 - Trusted signers (AWS accounts)
-- Cookies may be for many files
+- Signed cookies may permission an entire site. Signed URLs have higher priority.
 - Two types of signers
-  - Trusted key group (recommended)A -- APIs to create and rotate keys
+  - Trusted key group (recommended) -- APIs to create and rotate keys
     - Public Key uploaded to CloudFront to verify URLs
     - Private key used by apps (e.g. on EC2) to sign URLs via the Platform API
   - AWS Root Account with a CloudFront Key Pair (not recommended)
@@ -901,6 +916,8 @@
   - Classic Load Balancer not recommended and doesn't support Fargate
 - ECS tasks can mount EFS file systems (but not of course S3)
   - Fargate + EFS is nice
+- `/etc/ecs/ecs.config` should be populated with `ECS_CLUSTER` by a userdata script
+  - Might also want to populate `ECS_ENGINE_AUTH_TYPE=docker`, `ECS_LOGLEVEL=debug`, etc.
 
 ### ECS Tasks
 
@@ -1253,7 +1270,7 @@
   - Delete-after-processing
 - Duration 4 days (max 14)
 - Latency < 10ms
-- Messages < 256KB, plus attributes
+- Messages < 256KiB (of text), plus attributes
 - Types
   - Standard Queue
     - At least once delivery; best-effort ordering
@@ -1265,7 +1282,7 @@
     - Throughput limited to 300msg/s without batching; 3000msgs/s with batching
     - Deduplication based on de-dup ID or SHA-256
 - Configuration
-  - Visibility timeout (30s; 0-12h)
+  - Visibility timeout (default 30s; 0-12h)
     - Time to process
     - Extend with `ChangeMessageVisibility`
   - Delivery delay (0s; 0-15m)
@@ -1401,7 +1418,7 @@
   - Near-real-time (60s or 1MiB latency)
   - Supports data conversions, transformations, compression -- plus custom Lambda transformations
     - JSON to Apache Parquet (read-optimized, and wider support) or Apache ORC (write-optimized, plus allows update/delete)
-      - (based on schema in AWS Glue)
+      - (based on schema in AWS Glue -- Fully-managed ETL)
     - But first use Lambda to convert to JSON if necessary
 - Dynamic partitions based on partitioning keys (extra charge)
 - Buffering
@@ -1439,7 +1456,7 @@
     - In the `AWS` namespace
     - Dimensions (up to 30): instance ID, environment, etc
     - Timestamps
-      - EC2 default to "every 5m", but can pay for "every 1m" (e.g. t scale ASG faster)
+      - EC2 default to "every 5m", but can pay for "every 1m" (e.g. to scale ASG faster)
   - Custom metrics
     - `PutMetricData`
       - Accepts 2w in the past to 2h in the future, so TZ matters
@@ -1637,6 +1654,9 @@
   - Use a blueprint
   - Container image
   - Browse repo
+- Concurrency
+  - Reserved (for that function as opposed to others) -- Free
+  - Provisioned (always-available) -- Decidedly not free
 
 ### Lambda -- Synchronous
 
@@ -1885,6 +1905,7 @@
 - Aliases (e.g. "dev", "test", "prod") are mutable
   - Canary deployment via _weighting_
   - Aliases cannot reference other aliases (except `$LATEST`)
+  - Aliases can point to up to two versions at a time
 
 ### Lambda and CodeDeploy
 
@@ -1992,8 +2013,8 @@
       - RCU
         - One Strongly-consistent read or two Eventually-consistent read per second, up to 4KB in size.
         - DynamoDB Accelerator (DAX) can cache reads, queries, and scans
-          - No application logic changes
-          - Multi-AZ (min 3 notes recommended)
+          - No application logic changes -- API-compatible with DynamoDB
+          - Multi-AZ (min 3 nodes recommended)
             - Port 8111 or 9111 (encrypted in transit)
           - 5m Query TTL and 5m Item TTL
           - KMS, VPC, IAM, CloudTrail, etc.
@@ -2189,6 +2210,9 @@
     - X-Ray tracing
     - Canary deployment (with different stage variables)
       - Blue/green deployment
+  - Promotion
+    - Deploy API to prod stage, or
+    - Update a stage variable name from test to prod
   - Import API from Swagger / OpenAPI 3
   - Generate SDK and API specs -- Export as Swagger or OpenAPI 3 (optionally with Postman)
   - Transform and validate requests/responses
@@ -2355,8 +2379,8 @@
     - Authentication
       - SSH Keys (not available for root IAM user)
       - HTTPS
+        - Git Credentials for IAM user (preferred) -- creates codecommit-specific username/password
         - AWS CLI Credential Helper
-        - Git Credentials for IAM user
         - HTTPS(GRC) for `git-remote-codecommit`
     - Authorization -- IAM policies
       - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
@@ -2560,6 +2584,12 @@
 - `cdk diff` -- Local CDK vs deployed stack
 - `cdk deploy` -- Lots of magic
 - `cdk destroy` -- Be careful!
+- Sample sequence
+  - Create app from template
+  - Add code to create more resources
+  - Build the app
+  - Synthesize stacks
+  - Deploy stacks
 
 ### CDK -- Constructs
 
@@ -2874,16 +2904,16 @@
 - Available via SSM Parameter Store API
 - Tight integration with CloudFormation
   ```yaml
-    Resources:
-      MyCluster:
-        Type: AWS::RDS::DBCluster
-        Properties:
-          Engine: aurora-mysql
-          MasterUserName: marshall
-          ManageMasterUserPassword: true
-        Outputs:
-          Secret:
-            Value: !GetAtt MyCluster.MasterUserSecret.SecretArn
+  Resources:
+    MyCluster:
+      Type: AWS::RDS::DBCluster
+      Properties:
+        Engine: aurora-mysql
+        MasterUserName: marshall
+        ManageMasterUserPassword: true
+      Outputs:
+        Secret:
+          Value: !GetAtt MyCluster.MasterUserSecret.SecretArn
   ```
   ```yaml
   Resources:
