@@ -273,12 +273,12 @@
   - Security Groups are for a specific region/VPC (Virtual Private Cloud) combination
   - Permitting another SG really permits EC2 instances with the other SG.
   - 21 (FTP), 3389 (RDP)
-    | Security Group | Network ACL |
+  - | Security Group     | Network ACL                                      |
     | ------------------ | ------------------------------------------------ |
-    | Per instance | Entire subnet (additional layer of defense) |
-    | Only ALLOW | ALLOW and DENY |
-    | Looks at all rules | Lowest-number matching rule applies |
-    | Stateful | Stateless. Must explicitly allow return traffic. |
+    | Per instance       | Entire subnet (additional layer of defense)      |
+    | Only ALLOW         | ALLOW and DENY                                   |
+    | Looks at all rules | Lowest-number matching rule applies              |
+    | Stateful           | Stateless. Must explicitly allow return traffic. |
 
 ### Instance types (<https://instances.vantage.sh/>)
 
@@ -410,6 +410,7 @@
 ### SSL/TLS Certs
 
 - Load balancer terminates SSL with X.509 cert, usually from AWS Certificate Manager (ACM)
+  - Traffic between CloudFront and Origins may be HTTPS-only or match-viewer
 - SNI (Server Name Indication)
   - Supported by ALB, NLB, CloudFront -- not Classic LB
 - De-registration Delay (a/k/a Connection Draining) -- 300s (1s-3600s)
@@ -442,6 +443,7 @@
 
 ## Amazon Relational Database Service (RDS)
 
+- But CPU is manually-determined by the underlying EC2 type.
 - Managed: Postgres, MySQL, MariaDB, Oracle, Microsoft SQL Server, Aurora (AWS proprietary)
 - Auto-provisioned, patched, Point-in-time restore, monitoring, read replicas, Multi-AZ, maintenance windows
 - Horizontal and vertical scaling, backed by EBS (gp2 or io1)
@@ -536,7 +538,7 @@
   - Endpoints (apps, servers, AWS resources)
     - Interval 30s (10s more expensive)
     - HTTP, HTTPS, TCP
-    - At least 18% must be healthy
+    - Must be healthy at least 18% of the time
     - Threshold of 3 (default)
     - 2xx, 3xx, or based on text in the first 5k of the response.
     - Must allow Route53 Health Checkers access to endpoints -- <https://ip-ranges.amazonaws.com/ip-ranges.json> (ROUTE53_HEALTHCHECKS)
@@ -572,6 +574,12 @@
 - Tier 1 -- Public subnet -- ELB
 - Tier 2 -- Private subnet -- Autoscaling group with one subnet per AZ (Linux, Apache, PHP)
 - Tier 3 -- Data subnet -- EBS, EFS, ElastiCache, RDS (MySQL, Aurora), DynamoDB
+
+### VPC Endpoints
+
+- Gateway VPC endpoints
+  - Allow connectivity from VPC to S3/DynamoDB without an internet gateway or NAT device
+  - Does not use AWS PrivateLink; no additional charge
 
 ## S3 (Simple Storage Service)
 
@@ -841,7 +849,7 @@
 - Trusted signers (AWS accounts)
 - Signed cookies may permission an entire site. Signed URLs have higher priority.
 - Two types of signers
-  - Trusted key group (recommended) -- APIs to create and rotate keys
+  - CloudFront key group (recommended) -- APIs to create and rotate keys
     - Public Key uploaded to CloudFront to verify URLs
     - Private key used by apps (e.g. on EC2) to sign URLs via the Platform API
   - AWS Root Account with a CloudFront Key Pair (not recommended)
@@ -1067,6 +1075,8 @@
   - "Environment"
     - Collection of AWS resources running one version at a time
     - Tiers
+      - Web server environment tier (servicing HTTP)
+      - Worker environment tier (pulls from SQS)
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
@@ -1091,6 +1101,7 @@
 - Application update strategies -- <https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html>
   - Note: applications are typically just `.zip` files
   - Q: How does "Swap environment domain" work with persistent data?
+- Deployment strategies
   - All-at-once
   - Rolling
   - Rolling with additional batches
@@ -2407,6 +2418,9 @@
         - `files`, e.g. which artifacts toA upload to S3
       - `cache`
         - `paths`, e.g. `"/root/.m2/**/*"`
+    - Environment variables
+      - `CODEBUILD_KMS_KEY_ID` (arn:aws:kms:region-ID:account-ID:key/key-ID or alias/key-alias)
+      - `CODEBUILD_LOG_PATH`
     - Output logs in S3 or CloudWatch Logs
     - Build stats in CloudWatch Metrics
     - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
