@@ -266,6 +266,14 @@
 - Network attached storage -- EBS or EFS
 - Hardware storage -- EC2 Instance Store
 - Virtual Drives -- EBS
+  - Mounted on only a single EC2 instance at a time.
+  - Bound to a specific AZ
+  - Has a provisioned capacity (and that's how you're billed)
+  - Root EBS volumes are (by default) deleted when the EC2 instance terminates
+  - Snapshot-able (and hence copying across AZ or region)
+    - Snapshot archive (24h-72h to restore)
+    - Recycle bin (optional)
+    - Fast Snapshot Restore (FSR) ($$$)
 - Load Distribution -- ELB
 - Autoscaling Group -- ASG
 - Network: speed, Public IP, firewall
@@ -330,7 +338,7 @@
 
 ### Elastic File System -- EFS
 
-- Only for Linux instances.
+- Only for Linux instances -- NFSv4.1
 - POSIX-compatible managed NFSv4.1, surrounded by a Security Group
   - Scales automatically to PiB, supports 1000s of concurrent NFS clients, >10GiB/s throughput
 - Available cross-AZ to Linux instances (not Windows)
@@ -406,6 +414,7 @@
   - v2 -- Gateway Load Balancer -- IP (GENEVE encapsulation -- port 6081)
     - Route to 3rd-party appliances: Firewalls, IDS, Deep Packet Inspection, Payload manipulation, etc.
     - By default does not do cross-zone balancing (additional charge)
+    - IP-and-port-based stickiness
 
 ### SSL/TLS Certs
 
@@ -420,7 +429,7 @@
 - Horizontal EC2 scaling ("scale-out" and "scale-in")
   - Integrated with AWS load balancers, which can restart unhealthy instances
 - Launch Template
-  - AMI
+  - AMI + Instance Type
   - EC2 User Data (script running as root)
   - EBS Volumes
   - Security Groups
@@ -468,6 +477,8 @@
 - Behind a single DNS alias for availability -- synchronous replication.
 - Not for read replicas, though a single instance can be both ("Multi-AZ Cluster")
 - No downtime necessary to promote DB to multi-AZ
+- MariaDB, Oracle, SQL Server, PostgreSQL, and MySQL support Single-AZ and Multi-AZ with one standby.
+  - PostgreSQL and MySQL also support two readable standbys
 
 ### RDS Aurora
 
@@ -491,7 +502,8 @@
 
 ### RDS Proxy
 
-- Only VPC connections
+- Pools database connections
+- Only connections from within VPC
 - Serverless, autoscaling, HA, faster failover
 - Connection pooling, especially for Lambda functions
 - Allows non-Aurora instances to require IAM authentication
