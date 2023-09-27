@@ -166,6 +166,43 @@
 - Account-level IAM Credentials Report (.csv)
 - User-level IAM Access Advisor
 - Responsibility shared between AWS and account owner
+- Principles
+  - Any explicit `DENY`, then any `ALLOW`, else `DENY`
+  - S3 bucket policies are unioned in and then the above rule applies
+- Types
+  - AWS-Managed -- Good for power users and admins
+    - Automatically includes new services when appropriate
+  - Customer-managed
+    - Version-controlled
+    - Q: CloudTrail
+    - May apply to many principals
+    - May be dynamic, e.g. `"Resource": ["arn:aws:s3:::myCompany/home/${aws:username}/*"]`
+  - Inline
+    - 1-1 one relationship between policy and principal
+    - Not shown in IAM console!
+- IAM roles passed to AWS Services
+  - Requires `iam:PassRole` (and `iam:GetRole` to see what's being passed)
+  - Requires that the service trusts (i.e. `sts:AssumeRole`) the role
+- "AWS Directory Service" (AD as a forest of trees of objects -- Users, Computers, Printers, File Shares, Security Groups)
+  - AWS Managed Microsoft AD
+    - Supports MFA
+    - May have mutual-trust with on-prem AD
+  - AD Connector
+    - Supports MFA
+    - Proxies on-prem AD
+  - Simple AD (Samba)
+    - AD-compatible
+    - Standalone
+- Principals
+  - `"principal": {"AWS": "$ACCT"}` -- every principal in the account
+  - `"principal": {"AWS": "arn:aws:iam::$ACCT:root"}`
+  - `"principal": {"AWS": "arn:aws:iam::$ACCT:user/$USER"}`
+  - `"principal": {"AWS": "arn:aws:iam::$ACCT:role/$ROLE"}`
+  - `"principal": {"AWS": "arn:aws:sts::$ACCT:federated-user/$USER"}`
+  - `"principal": {"AWS": "arn:aws:sts::$ACCT:assumed-role/$ROLE/$ROLE_SESSION"}`
+  - `"principal": {"Federated": "cognito-identity.amazonaws.com"}`
+  - `"principal": {"Federated": "arn:aws:iam::$ACCT:saml-provider/$PROVIDER"}`
+  - `"principal": {"Service": ["ecs.amazonaws.com", "elasticloadbalancing.amazonaws.com"]}`
 
 ### API/SDK
 
@@ -2441,7 +2478,7 @@
     - `AWS::Serverless::Api`
     - `AWS::Serverless::SimpleTable`
   - Package/deploy
-    - `aws sam build` 
+    - `aws sam build`
       - Creates CloudFormation Template and application code
     - `aws sam package` (`aws cloudformation package`)
       - Stores zip into S3 bucket
@@ -2453,7 +2490,7 @@
   - `sam init --runtime` -- `python`, `nodejs`, `dotnetcore`, `dotnet`, `go`, `java` (and versions thereof)
     - Also specify `--location` for the template (perhaps even a `gh` (GitHub) file)
 - Layout
-  - `template.yaml` 
+  - `template.yaml`
     - Can define Lambda handlers and then one or more Api `Events` which map to it.
     - DynamoDB tables of type `AWS::Serverless::SimpleTable` (can set ProvisionedThroughput and ServerSideEncryption (SSE) as needed)
       - PrimaryKey
@@ -2551,7 +2588,7 @@
   - Email from Cognito itself (<50/day, just for testing)
   - Email from SES (requires verifying identity)
   - Optionally provides UI for sign-up, sign-in, Oath 2.0
-    - Domain can be AWS-owned 
+    - Domain can be AWS-owned
     - Domain can be custom DNS domain (recommended for production)
       - Defined in "App Integration"
       - ACM certificate in `us-east-1`
@@ -2562,7 +2599,7 @@
       - Migrate user trigger
     - Authentication
       - Pre-authentication (perhaps deny login)
-      - Post-authentication  (logging/analytics)
+      - Post-authentication (logging/analytics)
       - Pre-token-generation (add/remove token attributes)
     - Custom authentication (e.g. CAPTCHA or security question)
       - Define auth challenge
@@ -2583,6 +2620,14 @@
   - OpenIDConnect and SAML providers
   - Custom login server (Developer Authenticated Identities)
 - Gets temp credentials from Security Token Service (STS) service
+  - 15m-60m duration
+  - `AssumeRole`, `AssumeRoleWithSAML`, `AssumeRoleWithWebIdentity` (but use Cognito User Pools instead)
+  - `GetSessionToken`, `GetFederationToken`, `GetCallerIdentity`
+  - `DecodeAuthorizationMessage` (when denied)
+  - TODO -- <https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_aws-accounts.html>
+  - MFA
+    - `GetSessionToken` -- returns Access ID, Secret Key, Session Token, Expiration Date
+    - check `aws:MultiFactorAuthPresent:true`
 - Default IAM role for guests and authenticated users
   - Rules to determine role based on userID
   - Partition access using `policy variables`
@@ -2649,10 +2694,13 @@
     - `States.ALL` matches any error
 - Side note:
   ```javascript
-  exports.handler = async (event,context) => {
-    function MyError(msg) {this.name = 'MyError'; this.message=msg;}
+  exports.handler = async (event, context) => {
+    function MyError(msg) {
+      this.name = "MyError";
+      this.message = msg;
+    }
     MyError.prototype = new Error();
-    throw new MyError("I don't like this")
+    throw new MyError("I don't like this");
   };
   ```
 - ```javascript
@@ -2708,3 +2756,89 @@
   - E2E testing in the "test phase"
     - `amplify.yml`
     - <https://www.cypress.io/>
+
+## AWS Security and Encryption
+
+- SSL against MITM
+- Client-side vs server-side encryption
+- KMS auditable using CloudTrail
+  - Integrated into EBS, S3, RDS, SSM
+  - Symmetric (AES-256) -- Never exposed to user...instead they just get to call encrypt/decrypt methods
+  - Asymmetric -- Client can encrypt or validate signature.
+- Ownership (typically single-region)
+  - AWS-owned -- SS3-S3, SSE-SQS, SSE-DDB
+  - AWS-managed -- aws/rds, aws/ebs, etc
+  - Customer-managed -- 1USD/month + $0.03/10k calls
+- Rotation -- yearly, except for manually-imported KMS keys, which can only be rotated manually and only if using aliases
+- Permissioning -- Similar access policies to S3 policies, but default-DENY
+- (CloudHSM is out-of-scope for test)
+
+### Security Token Service (STS)
+
+- Access to AWS resources for a limited period of time
+  - At least 15m
+  - Up to 1h for AWS account owners
+  - Up to 36h for IAM accounts
+- Methods
+  - `AssumeRole` (intra-account or inter-account)
+  - `AssumeRoleWithSAML` (for users with SAML assertions)
+  - `AssumeRoleWithWebIdentity` (for users logged-in with an IdP; AWS recommends Cognito Identity Pools instead)
+  - `GetSessionToken` (MFA)
+    - Returns:
+      - `AccessKeyId`
+      - `SecretAccessKey` -- for HMAC signatures
+      - `SessionToken` -- Probably so AWS doesn't have to store the temporary session
+      - Expiration
+  - `GetFederationToken` (temporary credentials)
+  - `GetCallerIdentity` (IAM user or role used in the call)
+  - `DecodeAuthorizationMessage` (when AWS API denies)
+- Steps
+  - Define an IAM Role
+  - Define which principals may access the role
+  - Call `AssumeRole`
+  - Profit! (For 15m-60m)
+- Note: one can have an IAM Policy including a Condition using on `"aws:MultiFactorAuthPresent":"true"`
+
+## KMS
+
+- Type of keys
+  - AWS-owned (free) -- SSE-S3, SSE-SQS, SSE-DDB, etc
+  - Customer-managed (1 USD/month)
+- Usage (0.03USD / 10000 calls)
+- KMS Key Policies similar to S3 bucket policies
+- Copying snapshots
+  - `{"Principal": {"AWS": "arn:aws:iam::$TARGET-ACCOUNT:role/$ROLE"}}`
+  - `{"Action": ["kms:Decrypt", "kms:CreateGrant"]}`
+  - `{"Condition": {"StringEquals": {"kms:ViaService": "ec2.$REGION.amazonaws.com", "kms:CallerAccount": "$TARGET-ACCOUNT"}}}`
+- Encrypt API limited to 4k
+  - `GenerateDataKey` returns
+    - Plaintext DEK (for symmetric encryption of data)
+    - Encrypted DEK (to include in the final file "envelope")
+  - Encryption SDK does this for us
+    - LocalCryptoMaterialsCache significantly reduces KMS cost
+    - S3 Bucket Key for SSE-KMS dramatically reduces KMS cost (automatically rotated)
+      - Fewer KMS CloudTrail events
+  - `aws-encryption-api` also does this for us
+- Quota shared between all cryptographic operations and include both direct and indirect (e.g. S3) usage
+  - Decrypt, Encrypt, GenerateDataKey, GenerateDataKeyWithoutPlaintext, GenerateRandom, ReEncrypt, Sign (asymmetric), Verify (asymmetric)
+  - Symmetric: 5500/s-30000/s
+  - RSA: 500/s
+  - ECC: 300/s
+  - Consider DEK caching
+- Federated Users (`arn:aws:sts::$ACCT:federated_user/$USERNAME`) can have IAM rights to kms operations. (security token service)
+
+### SSM Parameter Store
+
+- Serverless, version-tracking, IAM security, EventBridge notification, CloudFormation integration
+- Optional KMS encryption
+- Hierarchically-structured key/value pairs, e.g. `/my-department/my-app/dev/db-url`
+  - | Parameter                     | Standard | Advanced             |
+    | ----------------------------- | -------- | -------------------- |
+    | Parameters per account/region | 10k      | 100k                 |
+    | Max parameter size            | 4KB      | 8KB                  |
+    | Parameter policies            | no       | yes                  |
+    | Cost                          | free     | nope                 |
+    | Storage                       | free     | USD 0.05/param/month |
+- Also, publicly-available parameters
+  - `/aws/service/global-infrastructure/{regions,services}`
+  - `aws ssm get-parameter --name /aws/service/global-infrastructure/regions/us-west-1/services/s3/endpoint --output json | jq '.Parameter.Value'`
