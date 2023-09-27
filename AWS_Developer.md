@@ -16,7 +16,7 @@
 
 - Patterns
   - Microservices vs monolithic, Fan-out, Idempotency, stateful, stateless, loose coupling
-  - Event-driven, choreography and orchestration, synchronous and asynchronous
+  - Event-driven, choreography (event-driven) and orchestration (centrally-controlled), synchronous and asynchronous
   - Fault-tolerance, e.g. exponential back-off, jitter, DLQ
   - Streaming
 - APIs: response/request, validation, status codes
@@ -26,7 +26,7 @@
 #### Task 2 -- Lambda code
 
 - Testing, Event source mapping, event-driven architectures, scalability, stateless apps, unit testing, VPC private resources
-- Lambda function configuration via parameters/environment variables -- memory, concurrency, timeout, runtime, handler, layers, extensions, triggers, destinations, tuning.
+- Lambda function configuration via parameters/environment variables -- memory, concurrency, timeout, runtime, handler, layers (for deployment), extensions, triggers, destinations, tuning.
 - Integration with services, destinations, DLQ
 
 #### Task 3 -- Data stores
@@ -45,7 +45,7 @@
 
 #### Task 1 -- Authentication and Authorization
 
-- Federated -- Security Assertion Markup (SAML), OpenID Connect (OIDC), Amazon Cognito
+- Federated -- Security Assertion Markup (SAML, using XML), OpenID Connect (OIDC, using JWTs), Amazon Cognito
 - Tokens -- JSON Web Token (JWT), OAuth, AWS Security Token Service (STS)
 - Cognito -- user pools and identity pools
 - Policies -- resource, service, principal, Role-based access control (RBAC), ACL, least privilege, customer vs AWS managed
@@ -1432,92 +1432,103 @@
 
 ## Monitoring, Troubleshooting, Auditing -- CloudWatch, X-Ray, CloudTrail
 
-- CloudWatch
-  - Metrics
-    - Builtin metrics: CPUUtilization, NetworkIn, ....
-      - In the `AWS` namespace
-      - Dimensions (up to 30): instance ID, environment, etc
-      - Timestamps
-        - EC2 default to "every 5m", but can pay for "every 1m" (e.g. t scale ASG faster)
-    - Custom metrics
-      - `PutMetricData`
-        - Accepts 2w in the past to 2h in the future, so TZ matters
-          - Non-current data takes much longer to show on graphs, etc.
-      - In a custom namespace
-      - Dimensions (up to 10): `Instance.id`, `Environment.name`, etc.
-      - Resolution
-        - Standard: 60s
-        - High Resolution: 1s, 5s, 10s, 30s
-    - Notes
-      - Free Tier allows 10 detailed monitoring metrics
-      - EC2 Memory usage must be pushed from inside the instance as a custom metric
-  - Logs
-    - Log Streams within Log Groups
-      - Log Groups, e.g. `/aws-glue/crawlers`, `/aws/datasync`, `/aws/lambda/$LAMBDA`
-        - Expiration: never, or 1d-10y
-        - Encrypted by default (KMS optional)
-    - Sources
-      - SDK
-      - CloudWatch Logs Agent (older) (EC2 and on-premises)
-        - Requires appropriate IAM perms
-      - CloudWatch Unified Agent (EC2 and on-premises)
-        - Can also send system-level metrics (CPU, Disk, RAM, swap, netstat, processes, etc)
-        - Configurable using SSM Parameter Store
-      - Elastic Beanstalk
-      - ECS containers
-      - Lambda
-      - VPC Flow Logs
-      - API Gateway
-      - CloudTrail (filtered)
-      - Route53 (DNS queries)
-    - Metric Filter
-      - Synthetic metrics based on query (up to three dimensions). Not retroactive.A
-      - Can trigger CloudWatch Alarm
-    - Destinations
-      - Export
-        - S3 (CreateExportTask can take up to 12h!)
-        - CloudWatch Logs Subscriptions (real-time, supports filtering)
-          - Up to two subscription filters per log group (Q: Why so low?)
-          - Subscription Destination (from other accounts)
-            - "Destination Access Policy" in recipient account, and an IAM Role which can be assumed by the Sender
+### CloudWatch
+
+- Metrics
+  - Builtin metrics: CPUUtilization, NetworkIn, ....
+    - In the `AWS` namespace
+    - Dimensions (up to 30): instance ID, environment, etc
+    - Timestamps
+      - EC2 default to "every 5m", but can pay for "every 1m" (e.g. t scale ASG faster)
+  - Custom metrics
+    - `PutMetricData`
+      - Accepts 2w in the past to 2h in the future, so TZ matters
+        - Non-current data takes much longer to show on graphs, etc.
+    - In a custom namespace
+    - Dimensions (up to 10): `Instance.id`, `Environment.name`, etc.
+    - Resolution
+      - Standard: 60s
+      - High Resolution: 1s, 5s, 10s, 30s
+  - Notes
+    - Free Tier allows 10 detailed monitoring metrics
+    - EC2 Memory usage must be pushed from inside the instance as a custom metric
+- Logs
+  - Log Streams within Log Groups
+    - Log Groups, e.g. `/aws-glue/crawlers`, `/aws/datasync`, `/aws/lambda/$LAMBDA`
+      - Expiration: never, or 1d-10y
+      - KMS optional (and specified at the Log Group Level)
+        - `associate-kms-key`, `create-log-group`
+  - Sources
+    - SDK
+    - CloudWatch Logs Agent (older) (EC2 and on-premises)
+      - Requires appropriate IAM perms
+    - CloudWatch Unified Agent (EC2 and on-premises)
+      - Can also send system-level metrics (CPU, Disk, RAM, swap, netstat, processes, etc)
+      - Configurable using SSM Parameter Store
+    - Elastic Beanstalk
+    - ECS containers
+    - Lambda
+    - VPC Flow Logs
+    - API Gateway
+    - CloudTrail (filtered)
+    - Route53 (DNS queries)
+  - Metric Filter
+    - Synthetic metrics based on query (up to three dimensions). Not retroactive.A
+    - Can trigger CloudWatch Alarm
+  - Destinations
+    - Export
+      - S3 (CreateExportTask can take up to 12h!)
+      - CloudWatch Logs Subscriptions (real-time, supports filtering)
+        - Up to two subscription filters per log group (Q: Why so low?)
+        - Subscription Destination (from other accounts)
+          - "Destination Access Policy" in recipient account, and an IAM Role which can be assumed by the Sender
+        - Lambda
+        - Kinesis Data Streams (even from multiple subscription filters from multiple accounts)
+          - Kinesis Data Analytics (KDA)
+          - EC2
           - Lambda
-          - Kinesis Data Streams (even from multiple subscription filters from multiple accounts)
-            - Kinesis Data Analytics (KDA)
-            - EC2
-            - Lambda
-          - Kinesis Data Firehose (KDF)
-            - S3 (near real-time)
-            - OpenSearch
-      - CloudWatch Logs Insights
-        - Auto-detects fields from AWS services and JSON log events
-        - Custom query language
-          - `fields @timestamp, @messages | sort @timestamp desc | limit 20`
-          - `filter @message like /Exception/ | stats count(*) as exceptionCount by bin(5m) | sort exceptionCount desc`
-          - `fields @message | filter @message not like /Exception/`
-        - Save queries to CloudWatch Dashboards
-          - Queries can span Log Groups from multiple AWS accounts
-          - Query engine -- not real-time engine
-  - Alarms (trigger notification)
-    - States: OK, INSUFFICIENT_DATA, ALARM
-    - Period (length of time to evaluate metric): 10s, 30s, $$N$$ minutes
-    - Actions
-      - EC2 (e.g. restarting instance)
-      - EC2 Auto Scaling
-      - Amazon SNS
-      - Composite Alarms! (AND, OR)
-    - `aws cloudwatch set-alarm-state` useful for testing
-    - CloudWatch Synthetics Canary
-      - Manually reproduce critical user journeys -- checks success, availability, latency
-      - Scripts in Node.js or Python
-      - Programmatic access to headless Google Chrome instance. (Q: Chromium???)
-      - May run periodically
-      - Blueprints
-        - Heartbeat Monitor
-        - API Canary
-        - Broken Link CHecker
-        - Visual Monitoring vs baseline
-        - Canary Recorder (Q: Node.js or Python???)
-        - GUI Workflow Builder
+        - Kinesis Data Firehose (KDF)
+          - S3 (near real-time)
+          - OpenSearch
+    - CloudWatch Logs Insights
+      - Auto-detects fields from AWS services and JSON log events
+      - Custom query language
+        - `fields @timestamp, @messages | sort @timestamp desc | limit 20`
+        - `filter @message like /Exception/ | stats count(*) as exceptionCount by bin(5m) | sort exceptionCount desc`
+        - `fields @message | filter @message not like /Exception/`
+      - Save queries to CloudWatch Dashboards
+        - Queries can span Log Groups from multiple AWS accounts
+        - Query engine -- not real-time engine
+
+### CloudWatch Alarms
+
+- Alarms (trigger notification)
+  - States: OK, INSUFFICIENT_DATA, ALARM
+  - Period (length of time to evaluate metric): 10s, 30s, $$N$$ minutes
+  - Actions
+    - EC2 (e.g. restarting instance)
+    - EC2 Auto Scaling
+    - Amazon SNS
+    - Composite Alarms! (AND, OR)
+  - `aws cloudwatch set-alarm-state` useful for testing
+
+### CloudWatch Synthetics Canary
+
+- Manually reproduce critical user journeys -- checks success, availability, latency
+- Scripts in Node.js or Python
+- Programmatic access to headless Google Chrome instance. (Q: Chromium???)
+- May run periodically
+- Blueprints
+  - Heartbeat Monitor
+  - API Canary
+  - Broken Link CHecker
+  - Visual Monitoring vs baseline
+  - Canary Recorder (Q: Node.js or Python???)
+    - GUI Workflow Builder
+
+### EventBridge (formerly CloudWatch Events)
+
+- EventBridge
   - Amazon EventBridge (formerly "CloudWatch Events")
     - Schema registry (including versioned and inferred schema), which can generate code bindings (Java, TypeSCript, Python, Go)
     - Policies
@@ -1542,6 +1553,9 @@
     - Buses!
       - AWS services publish to the default event bus
       - AWS SaaS Partners (e.g. zendesk, datadog, salesforce) publish to a partner event bus
+
+### X-Ray
+
 - X-Ray (Distributed traces)
   - Compatibility: Lambda, Elastic Beanstalk, ECS, ELB, API Gateway, EC2, even on-prem
   - Traces, segments, subsegments, annotations (indexed) and metadata (not indexed)
@@ -1568,10 +1582,16 @@
   - API
     - Writing -- `PutTraceSegments`, `PutTelemetryRecords`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
     - Reading -- `GetSampling{Rules,Targets,StatisticSummaries}`, `Get{Group,Groups,ServiceGraph,TimeSeriesServiceStatistics}`, `GetTrace{Graph,Summaries}`, `BatchGetTraces`
+
+### OpenTelemetry
+
 - AWS Distro for OpenTelemetry
   - Auto-instrumentation agents!
   - Send to X-Ray, CloudWatch, Amazon Managed Service for Prometheus, or Partner Monitoring Solutions
   - Instruments apps on AWS or on-premises
+
+### CloudTrail
+
 - CloudTrail
   - Governance, compliance, audit ... enabled by default
   - API call monitoring
@@ -2352,7 +2372,7 @@
     - `buildspec.yml` (in project root by default)
       - `env`
         - `variables` (plaintext, e.g. `JAVA_HOME`)
-        - `parameter-store` (SSM (systems manager) Parameter Store)
+        - `parameter-store` (SSM (systems manager) Parameter Store, including KMS-encrypted secrets)
         - `secrets-manager` (AWS Secrets Manager)
       - `phases`
         - `install`, e.g. `apt-get update && apt-get install -y maven` Q: Why not in the image?
@@ -2836,9 +2856,56 @@
     | ----------------------------- | -------- | -------------------- |
     | Parameters per account/region | 10k      | 100k                 |
     | Max parameter size            | 4KB      | 8KB                  |
-    | Parameter policies            | no       | yes                  |
+    | Parameter policies (TTL)      | no       | yes                  |
     | Cost                          | free     | nope                 |
     | Storage                       | free     | USD 0.05/param/month |
+    - Notifications to EventBridge, of course
 - Also, publicly-available parameters
   - `/aws/service/global-infrastructure/{regions,services}`
   - `aws ssm get-parameter --name /aws/service/global-infrastructure/regions/us-west-1/services/s3/endpoint --output json | jq '.Parameter.Value'`
+
+### Secrets Manager
+
+- More expensive than SSM Parameter Store
+- Automatic secret-rotation using Lambda
+- Mandatory KMS encryption
+- Integration with RDS (MySQL, PostgreSQL, Aurora)
+- Can keep cross-region read replicas in sync
+- Available via SSM Parameter Store API
+- Tight integration with CloudFormation
+  ```yaml
+    Resources:
+      MyCluster:
+        Type: AWS::RDS::DBCluster
+        Properties:
+          Engine: aurora-mysql
+          MasterUserName: marshall
+          ManageMasterUserPassword: true
+        Outputs:
+          Secret:
+            Value: !GetAtt MyCluster.MasterUserSecret.SecretArn
+  ```
+  ```yaml
+  Resources:
+    MyRDSDBInstanceRotationSecret:
+      Type: AWS::SecretsManager::Secret
+      Properties:
+        GenerateSecretString:
+          SecretStringTemplate: '{"username": "admin"}'
+          GenerateStringKey: password
+          PasswordLength: 16
+          ExcludeCharacters: "\"@\\"
+    MyRDSDBInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBInstanceClass: db.t2.micro
+        Engine: mysql
+        MasterUsername: !sub "{{resolve:secretsmanager:${MyRDSDBInstanceRotationSecret}::username}}"
+        MasterUserPassword: !sub "{{resolve:secretsmanager:${MyRDSDBInstanceRotationSecret}::password}}"
+    SecretRDSDBInstanceAttachment:
+      Type: AWS::SecretsManager::SecretTargetAttachment
+      Properties:
+        TargetType: AWS::RDS::DBInstance
+        SecretId: !Ref MyRDSDBInstanceRotationSecret
+        TargetId: !Ref MyRDSDBInstance
+  ```
