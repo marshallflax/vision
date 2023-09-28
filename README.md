@@ -39,16 +39,15 @@ These are transformative technologies and cannot just be dropped into existing e
 mindmap
  Transformative Technologies
   Git and GitHub
-    Transparent low-overhead collaboration. 
-    Simple visibility into every version of every document.
+    Transparent low-overhead collaboration
+    Simple visibility into every version of every document
     Works well on any sort of text files
   Markdown and Mermaid
-   Beautiful documents with low overhead layout and diagrams from text files.
-   Once documents are merely text, then we can use advanced collaboration tools designed for code.
+   Beautiful documents with low overhead layout and diagrams from text files
+   Once documents are merely text, then we can use advanced collaboration tools designed for code
   Integrated Development Environments, eg VSCode
    One tool to install. One tool to learn. One tool to teach.
-   A Swiss Army knife: it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
-
+   A Swiss Army knife -- it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
 ```
 
 </Pack>
