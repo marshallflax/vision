@@ -76,7 +76,7 @@ For reference, these are the technologies which I'm hoping will find truly wides
     * Quotes are preceded with `>`.
   * No need to use the mouse and menus to italicize a word ... just surround with `_`.
   * Because rich documents are now just text, we can use modern text-based collaboration tools.
-  * This essay is written in MarkDown. The raw MarkDown is available on the right-hand side of <https://github.com/marshallflax/vision/blame/main/README.md>.
+  * This essay is written in MarkDown. The diagrams are created in a MarkDown extension called Mermaid.
 * Integrated Development Environments
   * A single tool designed by programmers to make programmer's life easier and more efficient.
   * A text editor which is aware of the structure of the files it edits.
@@ -181,6 +181,28 @@ mindmap
   * Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
 * Of course, the real purpose is to teach the student continual self-improvement.
 * But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
+
+---
+
+```mermaid
+graph LR
+Recognize-->Recall-->Understand-->Apply-->Analyze-->Evaluate-->Create
+Perceive-->MindSet-->Imitation-->Mechanism-->Performance-->Adaptation-->Create
+class Recognize,Perceive classRed
+class Recall,MindSet classOrange
+class Understand,Imitation classYellow
+class Apply,Mechanism classLawnGreen
+class Analyze,Performance classSpringGreen
+class Evaluate,Adaptation classBlue
+class Create classPurple
+classDef classRed fill:#f00,color:#000;
+classDef classOrange fill:#f70,color:#000;
+classDef classYellow fill:#ff0,color:#000;
+classDef classLawnGreen fill:#7f0,color:#000;
+classDef classSpringGreen fill:#0f7,color:#000;
+classDef classBlue fill:#08f,color:#000;
+classDef classPurple fill:#a0f,color:#000;
+```
 
 ---
 
