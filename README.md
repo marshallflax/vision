@@ -33,6 +33,8 @@ These are transformative technologies and cannot just be dropped into existing e
 
 ## Transformative technologies
 
+<Pack scale=0.90>
+
 ```mermaid
 %%{init:{'theme':'forest'}}%%
 
@@ -171,11 +173,12 @@ mindmap
 
 ---
 
-Teacher-generated content is important, but active learning occurs when students generate their own content.
-A student can have a single repository containing many files. One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
-Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
-Of course, the real purpose is to teach the student continual self-improvement.
-But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
+* Teacher-generated content is important, but active learning occurs when students generate their own content.
+* A student can have a single repository containing many files. 
+  * One file might be a thematic summary of the course, mirroring the instructor's but in their own words.
+  * Another file might be a daily diary in the standard form of a Scrum Methodology Standup Meeting: what they did yesterday, what they'll be doing next, and whether they have any blockers.
+* Of course, the real purpose is to teach the student continual self-improvement.
+* But pushing this repo to GitHub has the advantage that data will never be lost, and also gives visibility to the teacher as to student progress.
 
 ---
 
