@@ -31,8 +31,6 @@ These are transformative technologies and cannot just be dropped into existing e
 
 ---
 
-<Pack scale=0.90>
-
 ## Transformative technologies
 
 ```mermaid
@@ -51,8 +49,6 @@ mindmap
    One tool to install; one tool to learn; one tool to teach.
    A Swiss Army knife: it renders Markdown, talks to Git and GitHub, gives immediate feedback on syntax, does spell checking, and offers a vibrant culture of free extensions.
 ```
-
-</Pack>
 
 ---
 
