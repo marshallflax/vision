@@ -12,7 +12,7 @@ mindmap
     Universal Design
    Software Development
     GitHub
-    Markup Languages
+    Structured Text
     Integrated Development Environments
   Dangers
    No Child Left Behind
@@ -67,6 +67,8 @@ For reference, these are the technologies which I'm hoping will find truly wides
   * A central Git repository allowing users to synchronize their repositories with each other.
   * Provides an easy-to-use web interface allowing people to view the contents of repositories without installing anything on their local machines.
   * This essay is available at <https://github.com/marshallflax/vision/blob/main/README.md>
+    * The actual text (which I typed into VSCode) is available at <https://github.com/marshallflax/vision/blob/main/README.md?plain=1>
+    * The origin of each line of the file is available at <https://github.com/marshallflax/vision/blame/main/README.md>
 * MarkDown
   * Simple punctuation which adds structure to a text document.
     * Lines which begin with `#`, `##`, `###`, `####` become headings in a table-of-contents.
@@ -128,7 +130,7 @@ As an example of the power of the above tools, let me create an imaginary class 
   With a single right-click, the teacher can see all of the recent changes, organized into logical chunks.
   The teacher clicks on any one of them, and the screen highlights all of the changes, with deleted lines in red and new lines in green.
   Some of the additions are familiar to the students from the prior day, but the teacher may also use this as an opportunity to introduce new material.
-* (In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.)
+  * In the higher grades, some of these chunks were created by the teacher, but many of them were proposed by students and then accepted (after review) by the teacher.
 * As yesterday's changes are reviewed, the teacher finds that there other concepts for which the students need additional explanations.
   The teacher navigates to that part of the structured glossary and the editor becomes a 21st-century blackboard as the teacher adds some nested bullet points with additional examples and glosses.
   Simple diagrams can be added just as easily as plain text.
