@@ -1581,7 +1581,7 @@
 - Blueprints
   - Heartbeat Monitor
   - API Canary
-  - Broken Link CHecker
+  - Broken Link Checker
   - Visual Monitoring vs baseline
   - Canary Recorder (Q: Node.js or Python???)
     - GUI Workflow Builder
@@ -1723,7 +1723,7 @@
 
 ### Lambda -- Asynchronous
 
-- `202 Accepted` HTTP response
+- Returns `202 Accepted` HTTP response
 - Sources
   - S3 events
     - In addition to SNS topics and SQS queues (which can itself call Lambda), S3 events can directly trigger an async Lambda (even with an SQS DLQ)
@@ -2058,7 +2058,7 @@
         - DynamoDB Accelerator (DAX) can cache reads, queries, and scans
           - No application logic changes -- API-compatible with DynamoDB
           - Multi-AZ (min 3 nodes recommended)
-            - Port 8111 or 9111 (encrypted in transit)
+            - Port 8111 (plaintext over wire) or 9111 (encrypted in transit)
           - 5m Query TTL and 5m Item TTL
           - KMS, VPC, IAM, CloudTrail, etc.
           - Can store aggregation results in Amazon ElastiCache
@@ -2256,7 +2256,8 @@
   - Promotion
     - Deploy API to prod stage, or
     - Update a stage variable name from test to prod
-  - Import API from Swagger / OpenAPI 3
+  - Import API from Swagger / OpenAPI v3
+    - TODO -- Read <https://en.wikipedia.org/wiki/OpenAPI_Specification>
   - Generate SDK and API specs -- Export as Swagger or OpenAPI 3 (optionally with Postman)
   - Transform and validate requests/responses
 - Q: What is Lambda Proxy Integration?
@@ -2272,7 +2273,7 @@
 - Private
   - Only accessible from your VPC (definable using Resource Policy)
 
-### API Types
+### API Gateway Types
 
 - HTTP API
   - OIDC, OAuth2
@@ -2369,7 +2370,7 @@
 - OPTIONS
   - request contains: `Origin`
   - response contains: `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Origin`
-- Note: `LAMBDA_PROXY` and `HTTP_PROXY` need to _manually_ set the response fields
+- Note: `LAMBDA_PROXY` and `HTTP_PROXY` modes need to _manually_ set the response fields
 
 ### API Gateway -- Security
 
@@ -2392,7 +2393,7 @@
 - REST API
   - All features except OIDC/OAuth 2.0/JWT
 - WebSocket API
-  - `npm install -g wscat` is like `curl`:w
+  - `npm install -g wscat` is like `curl`
   - Two-way, so allows push
   - "onConnect" Lambda function (passed a `connectionId` useful for DynamoDB to store session info)
   - "sendMessage" Lambda function ("frames")
@@ -2465,39 +2466,39 @@
       - Q: How do I manually run integration tests on a dev branch?
   - AWS Elastic Beanstalk
     - Alternative: CodeDeploy
-      - Controlled by `appspec.yml`
-        - `files` -- list of source/destination pairs
-        - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
-          - List of tuples -- script `location`, `timeout`, `runas`
-      - Targets:
-        - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
-          - Depends upon each EC2 instance having a tag identifying its environment
-          - Q: Why isn't codedeploy-agent installable as a yum package???
-          - EC2 instances must have authorization to access deployment bundles in S3
-        - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
-          - In-place deployment
-          - Blue/Green -- new ASG created
-            - ELB mandatory
-            - Choose how long to retail old ASG (and EC2 instances thereof)
-        - Lambda functions
-          - Traffic shift integrated within SAM (Serverless Application Model) framework
-          - Simply changes the percentages for the PROD (or whatever) alias.
-            - `LambdaLinear10PercentEvery3Minutes`
-            - `LambdaLinear10PercentEvery10Minutes`
-            - `LambdaCanary10Percent5Minutes` (and then 100%)
-            - `LambdaCanary10Percent30Minutes` (and then 100%)
-            - `AllAtOnce`
-        - ECS Platform
-          - Only Blue/Green deployments; switch occurs in ALB
-          - `ECSLinear10PercentEvery3Minutes`
-          - `ECSLinear10PercentEvery10Minutes`
-          - `ECSCanary10Percent5Minutes` (and then 100%)
-          - `ECSCanary10Percent30Minutes` (and then 100%)
+    - Controlled by `appspec.yml`
+      - `files` -- list of source/destination pairs
+      - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
+        - List of tuples -- script `location`, `timeout`, `runas`
+    - Targets:
+      - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
+        - Depends upon each EC2 instance having a tag identifying its environment
+        - Q: Why isn't codedeploy-agent installable as a yum package???
+        - EC2 instances must have authorization to access deployment bundles in S3
+      - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
+        - In-place deployment
+        - Blue/Green -- new ASG created
+          - ELB mandatory
+          - Choose how long to retail old ASG (and EC2 instances thereof)
+      - Lambda functions
+        - Traffic shift integrated within SAM (Serverless Application Model) framework
+        - Simply changes the percentages for the PROD (or whatever) alias.
+          - `LambdaLinear10PercentEvery3Minutes`
+          - `LambdaLinear10PercentEvery10Minutes`
+          - `LambdaCanary10Percent5Minutes` (and then 100%)
+          - `LambdaCanary10Percent30Minutes` (and then 100%)
           - `AllAtOnce`
-        - On-prem
-      - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
-      - Automated rollback
-        - Rollbacks are a _new_ deployment to a last known-good revision
+      - ECS Platform
+        - Only Blue/Green deployments; switch occurs in ALB
+        - `ECSLinear10PercentEvery3Minutes`
+        - `ECSLinear10PercentEvery10Minutes`
+        - `ECSCanary10Percent5Minutes` (and then 100%)
+        - `ECSCanary10Percent30Minutes` (and then 100%)
+        - `AllAtOnce`
+      - On-prem
+    - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
+    - Automated rollback
+      - Rollbacks are a _new_ deployment to a last known-good revision
   - CodePipeline -- Orchestrate the above via S3 artifacts
     - Runs using a service role
     - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
@@ -2576,7 +2577,7 @@
       - Creates/executes CloudFormation ChangeSet
         - Lambda, API Gateway, DynamoDB
 - SAM CLI allows running local build/test/debug apps (requires Docker, of course)
-  - Supports Cloud9, VSCode, JetBrains, PyCharm, Intelli
+  - Supports Cloud9, VSCode, JetBrains, PyCharm, IntelliJ
   - `sam init --runtime` -- `python`, `nodejs`, `dotnetcore`, `dotnet`, `go`, `java` (and versions thereof)
     - Also specify `--location` for the template (perhaps even a `gh` (GitHub) file)
 - Layout
@@ -2593,7 +2594,7 @@
 
 ### SAM Policy Templates
 
-- <https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html>, e.g. `S3ReadPolicy`, `SQSPollerPolicy`, `DynamoDBCrudPolicy`
+- <https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html>, e.g. `S3ReadPolicy`, `SQSPollerPolicy`, `DynamoDBCrudPolicy`, etc
   - `Policies:[SQSPollerPolicy:QueueName:!GetAtt MyQueue.QueueName]`
 
 ### SAM and CodeDeploy (traffic shifting)
