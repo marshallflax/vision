@@ -141,6 +141,7 @@
 
 - Analytics -- QuickSight
 - Business -- Chime, Connect, WorkMail
+- Comm -- Pinpoint (SMS gateway)
 - EndUser -- AppStream 2.0, Workspace
 - Frontend -- Device Farm
 - Game -- GameLift
@@ -149,11 +150,12 @@
 - Media -- Elastic Transcoder
 - Migration/Transfer -- Application Discover Service, Application Migration Service, Database Migration Service
 - Security/Identity/Compliance -- AWS Shield
-- Storage -- Snow, Storage Gateway
+- Storage -- Snowball, Storage Gateway
 
 ## AWS Infrastructure -- <https://aws.amazon.com/about-aws/global-infrastructure/>
 
 - Regions, Availability Zones "AZ" (3-6 per region, a-f), Data Centers, Edge/PoP
+  - But really does vary by region -- us-west-1 only [has](https://devopslearning.medium.com/aws-ebs-volumes-gp2-vs-gp3-io1-vs-io2-which-one-to-choose-7177e59fff3c) two available AZ.
 - Most services are region-scoped
   - Global: IAM, Route 53 (DNS), CloudFront CDN, Web App Firewall (WAF)
 - Regions: compliance, proximity, availability, pricing
@@ -316,9 +318,13 @@
 - May be "delete-on-termination" (default for root volumes)
 - Multi-attach is beyond the scope of this class.
 - Volume Types -- (Most have 0.1% - 0.2% annual failure rate)
+  - CLI
+    - `aws ec2 describe-volume-status --volume-ids $VOLUME_ID`
+    - `aws ec2 modify-volume -volume-type gp3 -iops 10000 -size 500 -volume-id $VOLUME_ID`
   - gp2/gp3 (SSD) (eligible as a boot volume)
     - gp2 1GiB to 16TiB; 3 IOPS/GiB
     - gp3 3k IOPS to 16k IOPS; 125 MiB/s to 1000 MiB/s (independently)
+      - Usually cheaper and [preferable](https://devopslearning.medium.com/aws-ebs-volumes-gp2-vs-gp3-io1-vs-io2-which-one-to-choose-7177e59fff3c) to gp2
   - io1/io2 (high-performance SSD) -- low-latency and/or high-throughput (eligible as a boot volume)
     - Up to 32k IOPS (and 64k for Nitro EC2)
     - io2 has better durability (0.001% annual failure) and higher IOPS/GiB
@@ -381,7 +387,7 @@
 - Elastic Load Balancer (managed)
   - Single DNS entry, e.g., `XXX.region.elb.amazonaws.com`
   - Client IP in `X-Forwarded-For` and `X-Forwarded-Proto`
-  - Downstream health check (typically `http:4567/health`)
+  - Downstream health check (typically `http:/health`)
   - SSL termination
   - HA over AZ
   - May serve public or private.
@@ -497,7 +503,7 @@
 - Encryption-at-rest using AWS KSM at initial launch (or snapshot-and-restore)
 - In-flight encryption -- supports AWS TLS root certs
 - IAM authentication or username/password
-- No SSH except RDS custom.
+- No SSH access except RDS custom.
 - Audit logs may be sent to CloudWatch Logs (longer retention)
 
 ### RDS Proxy
@@ -511,25 +517,29 @@
 ### Amazon Elastic Cache
 
 - Managed Redis or Memcached
+  - Redis
+    - Multi AZ transactional log, autofailover, read replicas (up to 5), durability (using append-only files), Sets and Sorted Sets.
+    - 10's of GiB to 100's of TiB
+  - Memcached
+    - Sharded, no replication, no persistence, no backup/restore
 - Can be on-premise (using AWS Outposts)
 - Requires application code (and especially an invalidation strategy)
-- Redis
-  - Multi AZ transactional log, autofailover, read replicas (up to 5), durability (using append-only files), Sets and Sorted Sets.
-  - 10's of GiB to 100's of TiB
-- Memcached
-  - Sharded, no replication, no persistence, no backup/restore
 - <https://aws.amazon.com/caching/best-practices/>
   - Lazy Loading (a/k/a Cache-Aside, Lazy Population)
   - Write-through (for smaller keyspaces)
-  - Russian-doll
+  - Russian-doll caching
+    - Cache both entities and their aggregations, etc.
   - Eviction Strategies
     - allkeys-{lfu,lru,random} (Least Frequently Used, Least Recently Used)
     - volatile-{lfr,lru,ttl,random}
     - no-eviction
   - Thundering herd
+    - Prewarm cache when possible
+    - Jitter TTL and expiration date/time
 
 ## Route 53 (DNS)
 
+- (DNS traditionally uses TCP/UDP port 53)
 - A, AAAA, CNAME (not for Zone Apex), NS
 - CAA, DS, MX, NAPTR, PTR, SOA, TXT, SPF, SRV
 - Zone File, Name Serve, TLD, SLD (second-level domain), FQDN, protocol, URL
@@ -543,7 +553,7 @@
   - Failover (active/passive)
   - Geo-location
   - Multi-value (up to 8 healthy records returned) -- "not a substitute for ELB"
-  - IP-based (CIDR)
+  - IP-based (CIDR ranges)
   - Geo-proximity (positive bias increases Voronoi region size; -99 to +99)
   - May be nested (e.g. multiple failover strategies, each with a different weight)
 - Health checks
@@ -580,6 +590,8 @@
   - Peering is not transitive, so $O(n^2)$
 - Private access to AWS services: VPC Endpoint Gateway (S3 and DynamoDB) and VPC Endpoint Interface
 - Site-to-site VPN (over public internet), Direct Connect (DX) (takes >1 month to establish)
+- PrivateLink
+  - Connectivity between VPCs, AWS, on-premises, and AWS partner solutions without using public internet.
 
 ### Typical 3-tier architecture
 
@@ -596,12 +608,15 @@
 ## S3 (Simple Storage Service)
 
 - Infinitely-scaling storage and backbone
-- Backup, storage, DR, archive, Hybrid Cloud storage, App hosting, Media, Data lakes, Big Data, Software delivery, static websites
+- Typical uses
+  - Backup, storage, DR, archive, hybrid cloud storage, app hosting, media, data lakes, big data, software delivery, static websites
 - Objects in globally-uniquely-named buckets (created in a specific region)
   - Bucket naming: no uppercase, no underscore, 3-63 chars, not an IP.
   - Key is full path
-  - Objects <5000GB (but multi-part upload for >5GB) with metadata key/value pairs, up to ten unicode key/value tags, and perhaps version ID.
-  - Objects have an ETag based solely on their contents (and perhaps KMS, etc)
+  - Objects <5000GB (but mandatory multi-part upload for >5GiB and suggested multi-party upload for >128MiB) with metadata key/value pairs, up to ten unicode key/value tags, and perhaps version ID.
+  - Objects have an ETag (typically just MD5 for smaller files) based solely on their contents (and perhaps KMS, etc)
+    - Very useful when passed via `If-None-Match` HTTP header (`304` -- "Not Modified")
+    - `If-None-Match: *` useful for PUT to block overwriting
 
 ### S3 Security
 
@@ -614,7 +629,7 @@
       - Effect: Allow or Deny
       - Principal: IAM User or IAM Role (e.g. EC2 instances)
       - Action, e.g. `s3:GetObject`, `s3:PutObject`
-      - Condition, e.g. `"Null"`, `"StringEquals"`, `"ArlLike"`, `"ForAllValues:StringNotEquals"` with parameters, `"s3:x-amz-server-side-encryption-aws-kms-key-id": "true"`, `"s3:x-amz-acl": ["public-read"]`, `"aws:SourceArn": "arn:aws:s3:::EXAMPLE-SOURCE-BUCKET"`, or `"aws:PrincipalServiceNamesList": "logging.s3.amazonaws.com"`
+      - Condition, e.g. `"Null"`, `"StringEquals"`, `"ArnLike"`, `"ForAllValues:StringNotEquals"` with parameters, `"s3:x-amz-server-side-encryption-aws-kms-key-id": "true"`, `"s3:x-amz-acl": ["public-read"]`, `"aws:SourceArn": "arn:aws:s3:::EXAMPLE-SOURCE-BUCKET"`, or `"aws:PrincipalServiceNamesList": "logging.s3.amazonaws.com"`
     - Can mandate encryption
     - Can be prevented from granting access to public, even for the entire account
   - Object ACL (only when specific objects need special protection)
@@ -724,7 +739,7 @@
 
 ### S3 Transfer Acceleration
 
-- Compatible with multi-part upload
+- Compatible with (and probably a good idea for) multi-part upload
 - Cache in edge location
 
 ### S3 Byte-Range Fetches
@@ -791,7 +806,7 @@
 - Permissioning for different prefixes
 - Each access point has a different DNS FQDN (public internet or VPC)
 - VPC
-  - VPC Endpoint needs to have s3:GetObject rights to both the bucket and the access point
+  - VPC Endpoint needs to have `s3:GetObject` rights to both the bucket and the access point
 
 ### S3 Object Lambda Access Point
 
@@ -801,6 +816,7 @@
 
 ## EC2 Instance Metadata Service -- IMDS
 
+- Link-local (`169.254.0.0/16`)
 - IMDSv1 -- <http://169.254.169.254/latest/meta-data>
 - IMDSv2 (EC2 instances can be configured to require this)
   - ``TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` ``
@@ -849,12 +865,12 @@
 
 ### CloudFront Caching
 
-- CreateInvalidation API (all files or a path)
+- `CreateInvalidation` API (all files or a path)
 - By default, query strings, http headers, and cookies are not part of the Cache Key
   - But if they are part of the Cache Key then they are passed to the origin
     - Or Origin Request Policy can define headers to pass to the origin even though it's not part of the Cache Key
 - CloudFront can only access public ALB or EC2 instances (not VPC)
-- CloudFront can exclude by country, etc.
+- CloudFront can exclude by source country, etc.
 
 ### CloudFront Signed URLs / Signed Cookies
 
@@ -960,7 +976,9 @@
     - From an S3 bucket ("bulk")
   - Logging configuration
     - CloudWatch
-    - AWSFireLens to Firehose/KinesisStream/OpenSearch/S3
+    - AWSFireLens (for ECS and Fargate) 
+      - Firehose/KinesisStream/OpenSearch/S3
+      - Streams logs to CloudWatch, Kinesis Data Firehose, and Fluentd/Fluent Bit
   - Trace Collection (via OpenTelemetry sidecar to AWS X-Ray)
   - Metrics Collection (via OpenTelemetry sidecar to CloudWatch or Managed Prometheus (with either Prometheus or OpenTelemetry libraries))
   - Data Volumes (bind mounts)
@@ -1046,11 +1064,12 @@
 
 ### Cloud 9
 
+- Cloud-hosted IDE
 - Requires `AWSServiceRoleForAWSCloud9`
 
 ### Amazon Elastic Kubernetes Service (EKS)
 
-- Aso supports EC2 or Fargate
+- Also supports EC2 or Fargate
 - Node Types
   - Managed Node Groups
     - Nodes in an AutoScalingGroup managed by EKS
@@ -1094,6 +1113,7 @@
       - Also, whether to use spot instances
   ```mermaid
   graph LR
+
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
 - Platforms
@@ -1119,7 +1139,7 @@
   - Rolling with additional batches
   - Immutable (new ASG, then swap)
     - Q: Why does the slide call this the "Longest deployment"???
-  - Blue Green (entirely new environment, canaried and transitioned using Route53)
+  - Blue/Green (entirely new environment, canaried and transitioned using Route53)
   - Traffic Splitting (canary testing)
     - One ALB, two ASG (equally-sized)
     - Rapid automated rollback.
@@ -1356,7 +1376,7 @@
   - CloudFormation (state changes)
   - AWS Budgets
   - S3 Bucket (events)
-  - DMS (new Replica)
+  - DMS (Database Migration Service, new Replica)
   - Lambda
   - DynamoDB
   - RDS (events)
@@ -1544,7 +1564,7 @@
 
 - Alarms (trigger notification)
   - States: OK, INSUFFICIENT_DATA, ALARM
-  - Period (length of time to evaluate metric): 10s, 30s, $$N$$ minutes
+  - Period (length of time to evaluate metric): 10s, 30s, $N$ minutes
   - Actions
     - EC2 (e.g. restarting instance)
     - EC2 Auto Scaling
