@@ -1,16 +1,20 @@
-# AWS Developer (Associate, DBA-C02)
+# AWS Notes
 
 ## Overview
 
-- <https://d1.awsstatic.com/training-and-certification/docs-dev-associate/AWS-Certified-Developer-Associate_Exam-Guide.pdf>
-- Develop Using
-  - Service APIs
-  - CLI
-  - SDKs
-- Deploy Using
-  - CI/CD pipelines
+### Courses
 
-### Domain 1 -- Development
+- CCP -- Certified Cloud Practitioner
+- SAA -- Certified Solutions Architect Associate
+- DVA -- Certified Developer Associate (DVA-C02)
+  - <https://d1.awsstatic.com/training-and-certification/docs-dev-associate/AWS-Certified-Developer-Associate_Exam-Guide.pdf>
+  - Develop Using: Service APIs, CLI, SDK
+  - Deploy Using: CI/CD pipelines
+- SOA -- Certified SysOps Administrator Associate
+- SAP -- Certified Solutions Architect Professional
+- DOP -- Certified DevOps Engineer Professional (DOP-C02)
+
+### Domain 1 -- Development (DOP-C02)
 
 #### Task 1 -- Application code
 
@@ -2417,6 +2421,15 @@
 
 ## AWS CI/CD
 
+- Tools
+  - CodeSuite
+    - CodeCommit (or GitHub or Bitbucket)
+    - CodeBuild (or Jenkins CI)
+    - CodeDeploy (or Jenkins CD or Spinnaker, etc) (to EC2 instances, Lambda, ECS, or even on-prem)
+    - CodePipeline (to Elastic Beanstalk)
+  - CodeStar (management of the above, but EOL is 2024-07 -- to be replaced by CodeCatalyst)
+  - CodeArtifact
+  - CodeGuru (automated code reviews)
 - CodeSuite
   - CodeCommit -- private Git repos, Minimal UI
     - Alternatives: GitHub or Bitbucket
@@ -2428,11 +2441,23 @@
         - HTTPS(GRC) for `git-remote-codecommit`
     - Authorization -- IAM policies
       - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
+      - Can deny modification of `refs/heads/main`, etc.
+        - `codecommit:{GitPush,DeleteBranch,PutFile,Merge{Branches,PullRequest}By{FastForward,Squash,ThreeWay}}`
     - Encryption -- KMS available
+    - Pull Requests
+      - May define Pull Request Approval Rules
+        - Pool of approvers (IAM users, federated users, IAM Roles, IAM Groups)
+        - Number of approvals required
+        - Approval rule templates, e.g. for dev vs prod
     - Notifications
+      - May be "full" or "basic"
+        - "Basic" -- same info as sent to EventBridge or CloudWatch
+      - `codecommit-repository-{comments-on-{commits,pull-requests},approvals-{status-changed,rule-override},pull-request-{created,source-updated,status-changed,merged},branches-and-tags-{created,updated,deleted}}`
+      - Useful for cross-region replication
       - SNS topic
       - Lambda
       - Q: Also AWS Chatbot (Slack)?
+    - Note: Triggers may be per-branch (up to 10 named branches)
   - CodeBuild (building and testing)
     - Alternatives
       - Jenkins CI
@@ -2455,6 +2480,8 @@
       - `CODEBUILD_KMS_KEY_ID` (arn:aws:kms:region-ID:account-ID:key/key-ID or alias/key-alias)
       - `CODEBUILD_LOG_PATH`
     - Output logs in S3 or CloudWatch Logs
+    - Events
+      - `codebuild-project-build-{state-{failed,in-progress,succeeded},phase-{failure,success}}`
     - Build stats in CloudWatch Metrics
     - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
       - Or provide your own Docker container.
@@ -2499,7 +2526,7 @@
     - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
     - Automated rollback
       - Rollbacks are a _new_ deployment to a last known-good revision
-  - CodePipeline -- Orchestrate the above via S3 artifacts
+  - CodePipeline -- Visual Workflow to Orchestrate the above via S3 artifacts
     - Runs using a service role
     - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
     - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, etc
@@ -2511,11 +2538,14 @@
       - ECS
       - ECS (Blue/Green)
       - S3
+    - Events
+      - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
     - Triggered by either:
       - CloudWatch Events (recommended)
         - Can be triggered by a _GitHub App_ -- "CodeStar Source Connection"
       - Webhooks (older)
       - Polling for changes
+    - Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
     - Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
       - Manual-approval steps
         - Optional SNS topic
