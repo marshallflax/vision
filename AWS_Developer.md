@@ -11,6 +11,7 @@
   - Develop Using: Service APIs, CLI, SDK
   - Deploy Using: CI/CD pipelines
 - SOA -- Certified SysOps Administrator Associate
+- ANS -- Advanced Networking Specialty (ANS-C01)
 - SAP -- Certified Solutions Architect Professional
 - DOP -- Certified DevOps Engineer Professional (DOP-C02)
 
@@ -160,8 +161,11 @@
 
 - Regions, Availability Zones "AZ" (3-6 per region, a-f), Data Centers, Edge/PoP
   - But really does vary by region -- us-west-1 only [has](https://devopslearning.medium.com/aws-ebs-volumes-gp2-vs-gp3-io1-vs-io2-which-one-to-choose-7177e59fff3c) two available AZ.
-- Most services are region-scoped
+- Most services are region-scoped, VPC-scoped, or VPC+AZ-scoped
   - Global: IAM, Route 53 (DNS), CloudFront CDN, Web App Firewall (WAF)
+  - Regional: S3, DynamoDB, SNS, SQS
+  - VPC: ELB, VPN, Internet Gateway
+  - VPC+AZ: EC2, RDS, RedShift (data warehouse), EBS
 - Regions: compliance, proximity, availability, pricing
 
 ### IAM
@@ -577,6 +581,17 @@
 
 - VPC (per Region), Subnet (per AZ) (public or private), Internet Gateway (used by public-subnet resources)
   - Private subnets: NAT Gateway (AWS-managed) and NAT Instances (user-managed) -- both reside in public subnet
+  - Up to 200 subnets per VPC
+- CIDR ("Classless Inter-Domain Routing")
+  - Defines both VPC and subnets
+    - Default VPC is `172.31.0.0/16` (part of RFC1918's `172.16.0.0/12`)
+      - VPCs may have one primary and four secondary IPv4 ranges (each between `/16` and `/28`) and one IPv6 range
+      - All IPv6 VPC blocks are `/56` and all IPv5 subnets are `/64`
+  - Default subnets are `/20`
+  - `0.0.0.0/0` useful for opening to entire Internet
+- Routing
+  - Each VPC has a "local" router responsible for traffic between subnets
+  - By default, all subnets may communicate
 - Security Groups
   - Stateful -- always allows return traffic
   - ALLOW rules only based on both IP addresses and security groups
@@ -608,6 +623,13 @@
 - Gateway VPC endpoints
   - Allow connectivity from VPC to S3/DynamoDB without an internet gateway or NAT device
   - Does not use AWS PrivateLink; no additional charge
+- Internet gateway
+  - Dual-homed on VPC and public address space
+  - A typical local router might have
+    | Destination | Target | 
+    | ----------- | ------ |
+    | 10.10.0.0/16 | Local |
+    | 0.0.0.0/0 | Internet Gateway |
 
 ## S3 (Simple Storage Service)
 
