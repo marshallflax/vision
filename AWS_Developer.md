@@ -287,6 +287,8 @@
 - Load Distribution -- ELB
 - Autoscaling Group -- ASG
 - Network: speed, Public IP, firewall
+  - Public IPs are chosen randomly from AWS's pool of public IPv4 addresses.
+    - "Elastic IP" if you need static public IPs (billed when unused until released)
   - Security Groups allow network traffic (i.e., no "deny" rules)
   - Security Groups are for a specific region/VPC (Virtual Private Cloud) combination
   - Permitting another SG really permits EC2 instances with the other SG.
@@ -580,26 +582,43 @@
 ## Virtual Private Cloud (VPC)
 
 - VPC (per Region), Subnet (per AZ) (public or private), Internet Gateway (used by public-subnet resources)
+  - For a given account, each region has a default VPC
   - Private subnets: NAT Gateway (AWS-managed) and NAT Instances (user-managed) -- both reside in public subnet
   - Up to 200 subnets per VPC
 - CIDR ("Classless Inter-Domain Routing")
   - Defines both VPC and subnets
     - Default VPC is `172.31.0.0/16` (part of RFC1918's `172.16.0.0/12`)
+      - Default subnets typically `172.31.0.0/20`, `172.31.16.0/20`, `172.31.32.0/20`, etc.
+      - Default VPC may be deleted (and then perhaps recreated)
       - VPCs may have one primary and four secondary IPv4 ranges (each between `/16` and `/28`) and one IPv6 range
-      - All IPv6 VPC blocks are `/56` and all IPv5 subnets are `/64`
-  - Default subnets are `/20`
+    - Your VPCs might be `10.xx.0.0/16`
+  - Default IPv4 subnets are `/20`
+    - IPv4 is mandatory for VPCs; IPv6 is optional.
+      - All IPv6 VPC blocks are `/56` and all IPv6 subnets are `/64`
+      - IPv6 addresses not supported by Amazon-provided DNS, AWS Site-to-Site VPN and customer gateways, NAT, and VPC endpoints.
   - `0.0.0.0/0` useful for opening to entire Internet
-- Routing
-  - Each VPC has a "local" router responsible for traffic between subnets
-  - By default, all subnets may communicate
-- Security Groups
-  - Stateful -- always allows return traffic
-  - ALLOW rules only based on both IP addresses and security groups
-  - Elastic Network Interface and EC2 instances
-- Network ACL (NACL)
-  - Stateless
-  - ALLOW and DENY rules based only on IP addresses
-  - Everything in the subnet
+  - _Five_ reserved IPs within a subnet (so a `/28` has 11 rather than 16)
+    - 0th -- Network address (router)
+    - 1st -- Reserved for VPC router
+    - 2nd -- Reserved for AWS-provided DNS
+    - 3rd -- Reserved for future AWS use
+    - Last -- Reserved for broadcast (but broadcast not allowed)
+- Security/Firewalls
+  - Routing
+    - Each VPC has a "local" router responsible for traffic between subnets
+    - By default, all subnets may communicate
+  - Security Groups
+    - Operates at the EC2 (actually ENI) granularity
+    - Stateful -- always allows return traffic
+    - Default behavior is to block inbound and allow outbound
+    - ALLOW rules only based on both IP addresses and security groups
+    - Elastic Network Interface and EC2 instances
+    - Denial results in connection timeout.
+  - Network ACL (NACL)
+    - Operates at the subnet granularity
+    - Stateless
+    - ALLOW and DENY rules based only on IP addresses. Lowest-number rule which matches wins.
+    - Everything in the subnet
 - VPC Flow Logs, Subnet Flow Logs, Elastic Network Interface Flow Logs
   - Also Managed resources: ELB, ElastiCache, RDS, etc.
   - Can be stored in S3, CloudWatch Logs, Kinesis Data Firehose
@@ -612,9 +631,34 @@
 - PrivateLink
   - Connectivity between VPCs, AWS, on-premises, and AWS partner solutions without using public internet.
 
+### Elastic Network Interface (ENI)
+
+- A virtual network interface (`Eth0`, `Eth1`, ...), typically for an EC2 instance, with:
+  - One primary private IPv4 and perhaps secondary IPv4 as well (up to 8, depending on machine type)
+  - Each private IPv4 may have an Elastic IP as well
+  - Up to one public IPv4
+  - One or more security groups attached to each ENI
+  - One MAC address
+- Secondary ENIs may be created independently and then moved from EC2 to EC2 within an AZ.
+  - Some AWS services (e.g. RDS) automatically create their own (requestor-managed) ENIs
+- Use cases
+  - Management network
+  - Dual-homing
+  - HA (High Availability) -- just move ENI to hot standby
+
+### VPC with Single Public Subnet
+
+- Suppose VPC is `10.100.0.0/16` and subnet is `10.100.0.0/24`
+- | Destination | Target |
+  | ----------- | ------ |
+  | `10.100.0.0/16` | local |
+  | `0.0.0.0/0` | igw-xxx |
+
+
 ### Typical 3-tier architecture
 
 - Tier 1 -- Public subnet -- ELB
+  - Still has private primary CIDR, but routing table allows access to an Internet Gateway instance
 - Tier 2 -- Private subnet -- Autoscaling group with one subnet per AZ (Linux, Apache, PHP)
 - Tier 3 -- Data subnet -- EBS, EFS, ElastiCache, RDS (MySQL, Aurora), DynamoDB
 
@@ -628,8 +672,11 @@
   - A typical local router might have
     | Destination | Target | 
     | ----------- | ------ |
-    | 10.10.0.0/16 | Local |
-    | 0.0.0.0/0 | Internet Gateway |
+    | `10.10.0.0/16` | Local |
+    | `0.0.0.0/0` | Internet Gateway |
+    - Each subnet can have its own route table
+
+### VPC Firewalls
 
 ## S3 (Simple Storage Service)
 
