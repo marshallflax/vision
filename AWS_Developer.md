@@ -1185,6 +1185,7 @@
       - Also, whether to use spot instances
   ```mermaid
   graph LR
+  
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
 - Platforms
