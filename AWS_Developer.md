@@ -648,12 +648,11 @@
 
 ### VPC with Single Public Subnet
 
-- Suppose VPC is `10.100.0.0/16` and subnet is `10.100.0.0/24`
-- | Destination | Target |
-  | ----------- | ------ |
-  | `10.100.0.0/16` | local |
-  | `0.0.0.0/0` | igw-xxx |
-
+- Suppose VPC is `10.100.0.0/16` and public subnet is `10.100.0.0/24` with an Internet gateway attached to it, and an EC2 instance has an Elastic IP.
+- | Destination     | Target  |
+  | --------------- | ------- |
+  | `10.100.0.0/16` | local   |
+  | `0.0.0.0/0`     | igw-xxx |
 
 ### Typical 3-tier architecture
 
@@ -670,7 +669,7 @@
 - Internet gateway
   - Dual-homed on VPC and public address space
   - A typical local router might have
-    | Destination | Target | 
+    | Destination | Target |
     | ----------- | ------ |
     | `10.10.0.0/16` | Local |
     | `0.0.0.0/0` | Internet Gateway |
@@ -1049,7 +1048,7 @@
     - From an S3 bucket ("bulk")
   - Logging configuration
     - CloudWatch
-    - AWSFireLens (for ECS and Fargate) 
+    - AWSFireLens (for ECS and Fargate)
       - Firehose/KinesisStream/OpenSearch/S3
       - Streams logs to CloudWatch, Kinesis Data Firehose, and Fluentd/Fluent Bit
   - Trace Collection (via OpenTelemetry sidecar to AWS X-Ray)
@@ -1186,7 +1185,6 @@
       - Also, whether to use spot instances
   ```mermaid
   graph LR
-
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
 - Platforms
