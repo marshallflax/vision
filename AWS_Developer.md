@@ -592,7 +592,7 @@
       - Pay per hour, usage, bandwidth
       - 5 Gps up to 100 Gbps
       - Only NACL matters (not security groups)
-      - Supports TCP, UDP, ICMP 
+      - Supports TCP, UDP, ICMP
     - NAT Instance on EC2
       - Can use Amazon Linux NAT (AMI) ... choose the appropriate EC2 size for your workload
         - Can optionally provide port forwarding and act as a bastion server
@@ -696,7 +696,7 @@
 
 ### VPC with Single Public Subnet
 
-- Single Public Subnet 
+- Single Public Subnet
   - Suppose VPC is `10.100.0.0/16` and public subnet is `10.100.0.0/24` with an Internet gateway attached to it, and an EC2 instance has an Elastic IP.
   - | Destination     | Target  |
     | --------------- | ------- |
@@ -731,7 +731,37 @@
     | `0.0.0.0/0` | Internet Gateway |
     - Each subnet can have its own route table
 
-### VPC Firewalls
+### VPC DNS and DHCP
+
+- Typical Public DNS: "ec2-13-232-197-112.ap-south-1.compute.amazonaws.com" (but "compute-1" rather than "us-east-1.compute")
+- Typical hostname and Private DNS: "ip-10-10-0-211.ap-south-1.compute.internal" (but ."ec2" rather than "us-east-1.compute")
+  - `/etc/resolv.conf` (populated based on `domain-name` and `domain-name-servers` within the VPC's DHCP Options Set)
+    - `search ap-south-1.compute.internal` (created by `/usr/sbin/dhclient-script`)
+    - `options timeout:2 attempts:5`
+    - `nameserver 10.10.0.2` (+2 entry is always AmazonProvidedDNS "Route 53 Resolver")
+      - Resolves both public and private Route53 zones and otherwise forwards to Public DNS
+      - Nameserver can also be set to a custom Active Directory or DNS server (e.g. `yum install bind bind-utils`) within the VPC with a SG allowing UDP 53.
+        - `/var/named/corp.internal.zone`, `/etc/named.conf`
+  - VPC's DHCP Options Set also contains
+    - NetBIOS node type
+    - `enableDnsSupport` (default `true`)
+      - Allows bootstrapping via 169.254.169.253
+    - `enableDnsHostName` (default `true` for default VPC; default `false` for non-default VPC)
+      - If both `enableDnsSupport` and `enableDnsHostName` are true and instance has a public IP, then hostname based on public IP.
+      - Private hosted zones in Route53 requires both `enableDnsSupport` and `enableDnsHostName`
+    - NTP servers IPs
+  - DHCP Options Sets are immutable but new ones can be created and attached to the VPC
+    - Changes require DHCP lease to expire -- but `sudo dhclient -r eth0` can force (or just reboot EC2 instances)
+    - If no DHCP Option Sets are associated with a VPC, then no DNS resolution
+    - `domain-name` can point to "private hosted" Route53 domain, but it is prepended to `/etc/resolv.conf`'s `search` configuration (e.g., `search corp.internal ap-south-1.compute.internal`)
+
+#### Hybrid DNS scenarios
+
+- DNS server on-prem; DNS server in AWS; Bidirectional
+  - Inbound resolver endpoint: On-prem forwards DNS requests to R53 resolver
+  - Outbound resolver endpoint: Conditional forwarders for AWS to On-prem
+
+### VPC Network Performance and Optimization
 
 ## S3 (Simple Storage Service)
 
@@ -1229,6 +1259,7 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
+
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
@@ -1239,11 +1270,13 @@
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
+
   ```mermaid
   graph LR
-  
+
   CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
   ```
+
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
