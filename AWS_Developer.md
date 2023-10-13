@@ -450,6 +450,7 @@
   - EBS Volumes
   - Security Groups
   - SSH Keys
+    - Default linux user is `ec2-user`
   - IAM Roles
   - Network and subnets
   - Load Balancer
@@ -584,6 +585,20 @@
 - VPC (per Region), Subnet (per AZ) (public or private), Internet Gateway (used by public-subnet resources)
   - For a given account, each region has a default VPC
   - Private subnets: NAT Gateway (AWS-managed) and NAT Instances (user-managed) -- both reside in public subnet
+    - NAT Gateway -- Highly-Available within AZ
+      - Reside within public subnets
+      - NAT Gateway is resilient within AZ, but requires an instance within each AZ for fault-tolerance
+      - Requires an Elastic IP
+      - Pay per hour, usage, bandwidth
+      - 5 Gps up to 100 Gbps
+      - Only NACL matters (not security groups)
+      - Supports TCP, UDP, ICMP 
+    - NAT Instance on EC2
+      - Can use Amazon Linux NAT (AMI) ... choose the appropriate EC2 size for your workload
+        - Can optionally provide port forwarding and act as a bastion server
+        - Can have its own Security Group
+      - Requires Elastic or Public IP
+      - Must disable Source/Destination checks on the EC2 instance, e.g. `aws ec2 modify-instance-attribute --no-source-dest-check --instance-id=${EC2_INSTANCE_ID}`
   - Up to 200 subnets per VPC
 - CIDR ("Classless Inter-Domain Routing")
   - Defines both VPC and subnets
@@ -591,12 +606,19 @@
       - Default subnets typically `172.31.0.0/20`, `172.31.16.0/20`, `172.31.32.0/20`, etc.
       - Default VPC may be deleted (and then perhaps recreated)
       - VPCs may have one primary and four secondary IPv4 ranges (each between `/16` and `/28`) and one IPv6 range
+        - Secondary ranges useful when the primary range is full, or when your primary range overlaps with some other VPC you wish to peer to.
+        - Cannot mix RFC1918 ranges -- `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, but can add "normal" CIDRs
+        - `100.64.0.0/10` is a shared address space for ISPs used for carrier-grade NAT.
+          - Note the `/10` ... it extends through `100.127.255.255`
+      - NB: If primary subnet lies in `100.64.0.0/10`, then RFC1918 CIDRs may _not_ be secondary ranges
     - Your VPCs might be `10.xx.0.0/16`
   - Default IPv4 subnets are `/20`
     - IPv4 is mandatory for VPCs; IPv6 is optional.
       - All IPv6 VPC blocks are `/56` and all IPv6 subnets are `/64`
       - IPv6 addresses not supported by Amazon-provided DNS, AWS Site-to-Site VPN and customer gateways, NAT, and VPC endpoints.
   - `0.0.0.0/0` useful for opening to entire Internet
+  - Subnets can be configured to automatically get a public IPv4.
+    - Subnets can be associated with a routing table. Those without a routing table use the VPC's routing table.
   - _Five_ reserved IPs within a subnet (so a `/28` has 11 rather than 16)
     - 0th -- Network address (router)
     - 1st -- Reserved for VPC router
@@ -607,6 +629,16 @@
   - Routing
     - Each VPC has a "local" router responsible for traffic between subnets
     - By default, all subnets may communicate
+    - Targets include
+      - Egress Only Internet Gateway
+      - Instance (i.e. NAT EC2 Instance)
+      - Internet Gateway
+      - NAT Gateway
+      - Network Interface
+      - Outpost Local Gateway
+      - Peering Connection
+      - Transit Gateway
+      - "Blackhole" -- Nonexistent targets, e.g. deleted NAT gateways
   - Security Groups
     - Operates at the EC2 (actually ENI) granularity
     - Stateful -- always allows return traffic
@@ -636,23 +668,47 @@
 - A virtual network interface (`Eth0`, `Eth1`, ...), typically for an EC2 instance, with:
   - One primary private IPv4 and perhaps secondary IPv4 as well (up to 8, depending on machine type)
   - Each private IPv4 may have an Elastic IP as well
-  - Up to one public IPv4
+  - Up to one public IPv4A
+  - Perhaps multiple private and IPv6 addresses (e.g. for hosting containers)
   - One or more security groups attached to each ENI
   - One MAC address
+  - One source/destination check flag
 - Secondary ENIs may be created independently and then moved from EC2 to EC2 within an AZ.
-  - Some AWS services (e.g. RDS) automatically create their own (requestor-managed) ENIs
+  - Some AWS services (e.g. RDS, Elastic Kubernetes Control Plane, AWS Workspaces, AWS Appstream) automatically create their own (requestor-managed) ENIs
+    - This is essentially just an example of cross-account ENIs
+  - Maximum number of ENIs determined by EC2 machine type
+    - Q: Does this include the requestor-managed ENIs?
 - Use cases
   - Management network
   - Dual-homing
   - HA (High Availability) -- just move ENI to hot standby
+- Not supported
+  - NIC teaming
+
+#### Bring Your Own IP
+
+- e.g., to keep your IP reputation (e.g. whitelisting or warm standby)
+- Regional Internet Registry (RIR), e.g. ARIN/RIPE/APNIC, must create a ROA (Rout Origin Authorization) to ASN 16509 and ASN 14618
+- Limits
+  - IPv4 -- Only `/24` or larger
+  - IPv6 -- Only `/48` or larger (publicly advertised) or `/56` or larger for non-publicly-advertised (but Direct Connect is possible)
+  - Up to five ranges per region per account
 
 ### VPC with Single Public Subnet
 
-- Suppose VPC is `10.100.0.0/16` and public subnet is `10.100.0.0/24` with an Internet gateway attached to it, and an EC2 instance has an Elastic IP.
-- | Destination     | Target  |
-  | --------------- | ------- |
-  | `10.100.0.0/16` | local   |
-  | `0.0.0.0/0`     | igw-xxx |
+- Single Public Subnet 
+  - Suppose VPC is `10.100.0.0/16` and public subnet is `10.100.0.0/24` with an Internet gateway attached to it, and an EC2 instance has an Elastic IP.
+  - | Destination     | Target  |
+    | --------------- | ------- |
+    | `10.100.0.0/16` | local   |
+    | `0.0.0.0/0`     | igw-xxx |
+- And then perhaps also a private subnet
+  - Add a 2nd subnet (private), perhaps `10.100.1.0/24`
+  - Security group allows 22 from `10.0.0.0/24`
+  - | Destination     | Target  |
+    | --------------- | ------- |
+    | `10.100.0.0/16` | local   |
+    | `0.0.0.0/0`     | nat-xxx |
 
 ### Typical 3-tier architecture
 
