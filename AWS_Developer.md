@@ -763,6 +763,96 @@
 
 ### VPC Network Performance and Optimization
 
+- Terms: 
+  - Flows
+    - Typically limited to 5Gbps, but 10Gbps within Cluster Placement Group
+  - Bandwidth (Gigabit/s)
+    - EC2 
+    - Internet Gateway, other regions, Direct Connect -- 5Gbps (unless current gen EC2 with at least 32 vCPUs, in which case 50% of network bandwidth)
+    - NAT Gateway -- 45Gbps/gateway
+    - VPC Peering
+    - Site-to-site aggregate bandwidth 1.25Gbps
+    - Transit Gateway limited to 50Gbps aggregate
+  - Throughput (Gigabit/s)
+  - Latency
+    - Place EC2 instances in a placement group
+    - EBS Optimized Instances have dedicated bandwidth to EBS (rather than sharing)
+    - Enhanced Networking -- Over 1M PPS using SR-IOV with PCI passthrough (avoiding hypervisor)
+      - Requires AMI and Instance Type support
+      - Intel "ixgbevf" driver (Intel 82559 VF up to 10Gps)
+        - `ethtool -i ${ETH}`
+      - Elastic Network Adapter (up to 100Gbps aggregate, 5-10Gbps/flow)
+        - Elastic Fabric Adapter (only Linux)
+      - ENI configuration no longer matters
+  - Jitter
+  - Packets/s (PPS)
+    - MTU (typically 1500, but Jumbo of up to 9001 bytes are possible and enabled by default in VPC)
+      - View with `ip link show $ETH`; change with `sudo ip link set dev $ETH mtu 9001`
+        - `tracepath $IP`
+      - Not all EC2 types support Jumbo frames
+      - MTU per ENI
+      - Jump frames within EC2 cluster placement groups for highest bandwidth
+      - AWS Direct Connect supports jumbo frames
+      - Internet Gateway 1500 bytes; VPC Endpoints 8500 bytes; intra-region VPC peering: 9001 bytes; inter-region VPC peering 1500; DirectConnect over TransGateway: 8500 bytes
+    - MTU Path discovery of course requires ICMP
+- IPv4 packet
+  - 0-3 Version (e.g. "4"))
+  - 4-7 IHL (Internet Header Length -- number of 32-bit words, minimum is 5 for 20 bytes, max is 15 for 60 bytes)
+  - 8-13 DSCP (QoS-like field)
+  - 14-15 ECN (congestion signalling)
+  - 16-31 Total Length (header and data)
+  - 32-47 Identification (for reassembling fragments, etc)
+  - 48-48 Reserved flag
+  - 49-49 Don't Fragment (DF)
+  - 50-50 More Fragments (50)
+  - 51-63 Fragment offset -- units of 8 bytes.
+  - 64-71 TTL
+  - 72-79 Protocol (0x08 is TCP, 0x01 is ICMP, 0x11 is UDP, 0x29 is IPv6 encapsulation, etc)
+  - 80-95 Header checksum
+  - 96-127 Source IP
+  - 128-159 Destination IP
+  - Perhaps Options (rarely used)
+- Intel Data Place Development Kit (DPDK) for faster packet processing
+- Network I/O Credits
+  - For r4, c5 instance families, etc.
+  - Makes benchmarking more difficult
+
+### VPC Monitoring
+
+- VPC Flow Logs -- IP traffic going in/out ENI
+  - VPC Flow Logs, Subnet Flow Logs, ENI Flow Logs (including ELB, RDS, ElastiCache, Redshift, WorkSpaces, etc)
+  - Store 
+    - S3 (and eventually query with Athena) 
+    - CloudWatch (and query with CloudWatch Log Insights
+      - `fields @timestamp, @message | sort @timestamp desc | limit 20`
+      - `stats sum(packet) as packetSum by srcAddr, dstAddr | sort packetSum desc | limit 15`
+      - `filter action="ACCEPT" | stats sum(packet) as packetSum by srcAddr, dstAddr | sort packetSum desc | limit 15`
+  - Hints
+    - If return packets are rejected, then it's NACL rather than SG
+    - Wireshark, tcpdump, traceroute, telnet, nslookup, ping (if SG/NACL permit it) are available
+  - Excluded traffic
+    - To/From native DNS services
+    - 169.254 traffic
+    - DHCP
+    - Windows license activation server
+- Format
+  - Version, account-id, interface-id, srcaddr, stdaddr, srcport, dstport, protocol, packets, bytes, start, end, action, log-status
+- Configuration
+  - Accept/Reject/all
+  - Maximum aggregation interval (1m or 10m)
+  - Destination (S3 or CloudWatch Logs)
+    - Destination Log group and IAM role (and grouped by ENI instance)
+  - Format (AWS Default or custom)
+
+### VPC Traffic Mirroring
+
+- All traffic (or filtered subset) from an ENI can be sent to out-of-band monitoring (content inspection, threat monitoring, troubleshooting)
+  - Filters: Inbound/Outbound, Accept/Reject, L4 Protocol, Source/Destination Port Range, Source/Destination CIDR
+  - Target can be another ENI or a Network Load Balancer (UDP 4789)
+    - Target can be a peered cis-region VPC or transit gateway (even belonging to another AWS account)
+
+### VPC Private Connectivity
+
 ## S3 (Simple Storage Service)
 
 - Infinitely-scaling storage and backbone
@@ -1801,7 +1891,7 @@
       - Fargate -- can only use sidecar
     - Of course, in all cases, needs IAM rights to write to X-Ray
   - API
-    - Writing -- `PutTraceSegments`, `PutTelemetryRecords`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
+    - Writing -- `PutTraceSegments`, `PutTelemetryReco/0x08rds`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
     - Reading -- `GetSampling{Rules,Targets,StatisticSummaries}`, `Get{Group,Groups,ServiceGraph,TimeSeriesServiceStatistics}`, `GetTrace{Graph,Summaries}`, `BatchGetTraces`
 
 ### OpenTelemetry
