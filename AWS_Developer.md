@@ -629,6 +629,7 @@
   - Routing
     - Each VPC has a "local" router responsible for traffic between subnets
     - By default, all subnets may communicate
+    - Don't forget to associate routing tables with subnets
     - Targets include
       - Egress Only Internet Gateway
       - Instance (i.e. NAT EC2 Instance)
@@ -655,13 +656,26 @@
   - Also Managed resources: ELB, ElastiCache, RDS, etc.
   - Can be stored in S3, CloudWatch Logs, Kinesis Data Firehose
 - VPC Peering
+  - One VPC requests peering and the other accepts
   - Cross-account and/or cross-region
-  - CIDR must not overlap
-  - Peering is not transitive, so $O(n^2)$
-- Private access to AWS services: VPC Endpoint Gateway (S3 and DynamoDB) and VPC Endpoint Interface
+  - CIDR must not overlap; only one peering between any two VPCs
+- Peering among VPCs is not transitive, so $O(n^2)$; Direct Connect traffic doesn't go to peers (and ditto for Internet Gateway, NAT Gateway, S3/DynamoDB VPC Endpoint, etc)
+- Private access to AWS services
+  - VPC Endpoint Gateway (S3 and DynamoDB)
+  - VPC Endpoint Interface
+  - VPC PrivateLink
+  - Transit VPC
+  - Transit Gateway
 - Site-to-site VPN (over public internet), Direct Connect (DX) (takes >1 month to establish)
-- PrivateLink
+- AWS PrivateLink (VPC Endpoint Services) (SaaS)
   - Connectivity between VPCs, AWS, on-premises, and AWS partner solutions without using public internet.
+    - No overlapping-CIDR restrictions
+  - Allows exposing a Network Load Balancer-fronted service to 1000s of VPCs (your or other accounts)
+    - VPC Peering only scales to 100s.
+    - An "Endpoint Service" exposes an NLB
+  - On the other side of the NLB we of course can also have on-prem services via VPN or DX
+    - We call the VPC containing the NLB an "Edge VPC"
+- Note: Private subnets can't even do a `yum update`, so it is vital to have up-to-date AMI
 
 ### Elastic Network Interface (ENI)
 
@@ -719,17 +733,40 @@
 
 ### VPC Endpoints
 
-- Gateway VPC endpoints
+- Removes the need for IGW, NAT GW, etc to access AWS; avoids public internet
+  - Managed, horizontally-scaled, redundant, highly-available, without bandwidth constraint
+- VPC Gateway Endpoints
   - Allow connectivity from VPC to S3/DynamoDB without an internet gateway or NAT device
   - Does not use AWS PrivateLink; no additional charge
-- Internet gateway
-  - Dual-homed on VPC and public address space
+  - Requires a routing-table entry to an `pl-xxxx` destination
+    - Outbound 80 and 443 traffic to the `pl-xxxx` destination must be enabled in Security Group
+  - Has attached IAM policy (e.g. `AmazonS3FullAccess`)
+    - Can restrict which S3/DynamoDB actions (or buckets/tables, etc) are allowed
+    - Default is permissive
+    - S3 bucket policies can conversely filter on `aws:sourceVpce` (and actually `aws:sourceVpc` as well) using `StringNotEquals` conditions, but that's uglier.
+      - Note: S3 bucket policies can filter by public IP or elastic IP but not private IP.
+- VPC Gateway Interface
+  - Creates an ENI in each private subnet
   - A typical local router might have
     | Destination | Target |
     | ----------- | ------ |
     | `10.10.0.0/16` | Local |
     | `0.0.0.0/0` | Internet Gateway |
     - Each subnet can have its own route table
+- VPC Interface Endpoint
+  - Only supports IPv4; only supports TCP
+  - AWS creates Regional and Zonal (useful for avoiding inter-AZ charges) DNS entries for the presented service
+  - Uses Security Groups (inbound rules, of course; 443, of course)
+  - 0.01 USD/hour + 0.01 USD/GiB
+  - Uses a subnet IP
+    - For HA (and to avoid inter-AZ data charges) be sure to create an Interface Endpoint per AZ
+  - Q: Can one Interface Endpoint present multiple AWS services?
+- Exposing your services to other VPCs
+  - Service must be behind a Network Load Balancer
+  - Service can be behind a VPN/DX to on-premise
+- Note: "Private DNS name" (really enabling a private DNS zone in Route53) for a VPC Interface Endpoint actually just overrides the public DNS (e.g., `athena.us-east-1.amazonaws.com`)
+  - Requires "Enable DNS hostnames" and "Enable DNS Support
+  - Alternative is to specify an explicit `--endpoint-url`
 
 ### VPC DNS and DHCP
 
@@ -763,11 +800,11 @@
 
 ### VPC Network Performance and Optimization
 
-- Terms: 
+- Terms:
   - Flows
     - Typically limited to 5Gbps, but 10Gbps within Cluster Placement Group
   - Bandwidth (Gigabit/s)
-    - EC2 
+    - EC2
     - Internet Gateway, other regions, Direct Connect -- 5Gbps (unless current gen EC2 with at least 32 vCPUs, in which case 50% of network bandwidth)
     - NAT Gateway -- 45Gbps/gateway
     - VPC Peering
@@ -821,8 +858,8 @@
 
 - VPC Flow Logs -- IP traffic going in/out ENI
   - VPC Flow Logs, Subnet Flow Logs, ENI Flow Logs (including ELB, RDS, ElastiCache, Redshift, WorkSpaces, etc)
-  - Store 
-    - S3 (and eventually query with Athena) 
+  - Store
+    - S3 (and eventually query with Athena)
     - CloudWatch (and query with CloudWatch Log Insights
       - `fields @timestamp, @message | sort @timestamp desc | limit 20`
       - `stats sum(packet) as packetSum by srcAddr, dstAddr | sort packetSum desc | limit 15`

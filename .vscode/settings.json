@@ -40,6 +40,7 @@
         "getenv",
         "HEALTHCHECKS",
         "HMAC",
+        "hostnames",
         "Idempotency",
         "IMDS",
         "Intelli",
