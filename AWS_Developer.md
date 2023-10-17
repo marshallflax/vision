@@ -132,7 +132,7 @@
 #### Features in scope
 
 - Analytics -- Athena, Kinesis, OpenSearch
-- App Integration -- AppSync, EventBridge, Simple Notification Service, Simple Queue Service, Step Functions
+- App Integration -- AppSync, EventBridge, Simple Notification Service (SNS), Simple Queue Service (SQS), Step Functions
 - Compute -- EC2, Elastic Beanstalk, Lambda, Serverless Application Model (SAM)
 - Containers -- Copilot, Elastic Container Registry (ECR), Elastic Container Service (ECS), Elastic Kubernetes Service (EKR)
 - Database -- Aurora, DynamoDB, ElastiCache, MemoryDB for Redis, RDS
@@ -1261,6 +1261,16 @@
   - Fargate + EFS is nice
 - `/etc/ecs/ecs.config` should be populated with `ECS_CLUSTER` by a userdata script
   - Might also want to populate `ECS_ENGINE_AUTH_TYPE=docker`, `ECS_LOGLEVEL=debug`, etc.
+- | Dimension    | ECS Container Instance | Fargate          |
+  | ------------ | ---------------------- | ---------------- |
+  | Host OS      | Linux, Windows         | Linux            |
+  | Max vCPU     | 448                    | 4                |
+  | Max RAM      | 26 TB                  | 30 GB            |
+  | CPU Bursting | Linux                  | No               |
+  | Pricing      | Per EC2 instance       | Per Task         |
+  | EFS          | Yes                    | Yes              |
+  | EBS          | Hard                   | No               |
+  | Networking   | Lots of options        | One ENI per task |
 
 ### ECS Tasks
 
@@ -1915,7 +1925,7 @@
         - CloudTrail -- anything
     - Destinations
       - Aggregation: Another event bus
-      - Compute: Lambda, AWS Batch, Launch ECS Task
+      - Compute: Lambda, AWS Batch, Launch ECS (Elastic Container Service) Task
       - Integration: SQS, SNS, Kinesis Data Stream
       - Maintenance: SSM, EC2 Actions
       - Orchestration: Step Functions, CodePipeline, CodeBuild
@@ -2725,24 +2735,32 @@
   - ELB to EC2 Servers
 - Route 53 can simplify this to our users, of course
 
-## AWS CI/CD (CICD)
+## AWS CI/CD ("CICD")
 
+- Continuous Integration (CodeBuild, Jenkins CI, etc)
+- Continuous Delivery (CodeDeploy, Jenkins CD, Spinnaker, etc)
 - Tools
   - CodeSuite
     - CodeCommit (or GitHub or Bitbucket)
     - CodeBuild (or Jenkins CI)
     - CodeDeploy (or Jenkins CD or Spinnaker, etc) (to EC2 instances, Lambda, ECS, or even on-prem)
-    - CodePipeline (to Elastic Beanstalk)
+    - CodePipeline (orchestrates all of the above)
   - CodeStar (management of the above, but EOL is 2024-07 -- to be replaced by CodeCatalyst)
   - CodeArtifact
   - CodeGuru (automated code reviews)
 
 ### CodeSuite
 
+- CodeCommit, CodeBuild, CodeDeploy, CodePipeline
+
 #### CodeCommit
 
+- Source-code version control
+  - Collaboration
+  - Backup
+  - Auditable
 - CodeCommit -- private Git repos, Minimal UI
-  - Alternatives: GitHub or Bitbucket
+  - Alternatives: GitHub, GitLab, Bitbucket, etc
   - Authentication
     - SSH Keys (not available for root IAM user)
     - HTTPS
@@ -2753,21 +2771,24 @@
     - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
     - Can deny modification of `refs/heads/main`, etc.
       - `codecommit:{GitPush,DeleteBranch,PutFile,Merge{Branches,PullRequest}By{FastForward,Squash,ThreeWay}}`
+    - Note: Resource-style policies not yet supported
   - Encryption -- KMS available
+    - HTTPS or SSH is mandatory
   - Pull Requests
     - May define Pull Request Approval Rules
       - Pool of approvers (IAM users, federated users, IAM Roles, IAM Groups)
       - Number of approvals required
       - Approval rule templates, e.g. for dev vs prod
-  - Notifications
+  - SNS (or AWS Chatbot for Slack) notifications
     - May be "full" or "basic"
       - "Basic" -- same info as sent to EventBridge or CloudWatch
     - `codecommit-repository-{comments-on-{commits,pull-requests},approvals-{status-changed,rule-override},pull-request-{created,source-updated,status-changed,merged},branches-and-tags-{created,updated,deleted}}`
     - Useful for cross-region replication
     - SNS topic
-    - Lambda
-    - Q: Also AWS Chatbot (Slack)?
-  - Note: Triggers may be per-branch (up to 10 named branches)
+  - SNS (or Lambda) triggers (all events, push to branch, create branch/tag, delete branch/tag)
+    - Triggers may be per-branch (up to 10 named branches)
+    - Triggers may apply to all branches
+    - May contain a custom data string
 
 #### CodeBuild
 
@@ -2846,9 +2867,10 @@
 #### CodePipeline
 
 - CodePipeline -- Visual Workflow to Orchestrate the above via S3 artifacts
-  - Runs using a service role
-  - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
-  - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, etc
+  - Runs using an attached service role
+  - Requires a single "Source Provider" -- Github, S3, Elastic Container Registry (ECR), or CodeCommit
+  - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, CloudBees, TeamCity, etc
+  - Stage -- Optional "Test" -- CodeBuild, AWS Device Farm, 3rd-party tools
   - Stage -- Mandatory "Deploy Provider"
     - CloudFormation
     - CloudDeploy
@@ -2857,23 +2879,28 @@
     - ECS
     - ECS (Blue/Green)
     - S3
-  - Events
-    - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
+  - Stage -- Optional "Invoke" -- Lambda, Step Functions
+  - Manual approval can be required before any stage
+- Events
+  - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
   - Triggered by either:
     - CloudWatch Events (recommended)
       - Can be triggered by a _GitHub App_ -- "CodeStar Source Connection"
     - Webhooks (older)
     - Polling for changes
-  - Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
-  - Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
-    - Manual-approval steps
-      - Optional SNS topic
-      - Optional URL giving context to the reviewer
-      - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
-    - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
-  - Note: Actions are performed in parallel; action groups are performed sequentially
-    - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
-      - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
+  - EventBridge events for failed pipelines, cancelled stages, etc.
+    - A failed stage stops the pipeline and the console will show that
+    - CloudTrail can be useful to audit AWS API calls to understand why a stage failed
+- Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
+- Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
+  - Manual-approval steps
+    - Optional SNS topic
+    - Optional URL giving context to the reviewer
+    - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
+  - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
+- Note: Actions are performed in parallel; action groups are performed sequentially
+  - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
+    - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
 
 #### CodeStar
 
