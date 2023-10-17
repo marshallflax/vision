@@ -657,6 +657,7 @@
   - Can be stored in S3, CloudWatch Logs, Kinesis Data Firehose
 - VPC Peering
   - One VPC requests peering and the other accepts
+    - Q: How can this be orchestrated with CDK???
   - Cross-account and/or cross-region
   - CIDR must not overlap; only one peering between any two VPCs
 - Peering among VPCs is not transitive, so $O(n^2)$; Direct Connect traffic doesn't go to peers (and ditto for Internet Gateway, NAT Gateway, S3/DynamoDB VPC Endpoint, etc)
@@ -675,7 +676,14 @@
     - An "Endpoint Service" exposes an NLB
   - On the other side of the NLB we of course can also have on-prem services via VPN or DX
     - We call the VPC containing the NLB an "Edge VPC"
+  - | PrivateLink                | VPC Peering            |
+    | -------------------------- | ---------------------- |
+    | Expose single service      | Expose entire VPC      |
+    | Overlapping CIDR fine      | CIDRs must be disjoint |
+    | No limit                   | Limit of 125 peerings  |
+    | Consumer initiates traffic | Bidirectional          |
 - Note: Private subnets can't even do a `yum update`, so it is vital to have up-to-date AMI
+- Q: What's a Virtual Private Gateway (VGW)???
 
 ### Elastic Network Interface (ENI)
 
@@ -760,6 +768,10 @@
   - 0.01 USD/hour + 0.01 USD/GiB
   - Uses a subnet IP
     - For HA (and to avoid inter-AZ data charges) be sure to create an Interface Endpoint per AZ
+    - Can be accessed via DC (Direct Connection), AWS-managed VPN, VPC peering
+      - But for "private DNS name" to work the peered VPC needs to be attached to a custom Route53 Private Hosted Zone
+      - Or an on-prem DNS server needs to forward requests to a Route53 Resolver
+      - See <https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/welcome.html>
   - Q: Can one Interface Endpoint present multiple AWS services?
 - Exposing your services to other VPCs
   - Service must be behind a Network Load Balancer
@@ -888,7 +900,17 @@
   - Target can be another ENI or a Network Load Balancer (UDP 4789)
     - Target can be a peered cis-region VPC or transit gateway (even belonging to another AWS account)
 
-### VPC Private Connectivity
+### Transit Gateway (TGW)
+
+- Connections from VPCs, VPN Connection, AWS Direct Connect
+  - May be peered with Transit Gateways in other regions
+- Supports AWS Network Firewall (both North/South and East/West)
+- Attachments
+  - VPCs (disjoint CIDRs)
+    - TGW routing table automatically gets route to attached VPC, but each attached VPC needs a manual route to the TGW
+  - VPN
+    - Each VPN limited to 1.25Gbps, but ECMP (equal-cost multi-part) can give you 50Gbps
+- Supports VRF (Virtual Routing and Forwarding)
 
 ## S3 (Simple Storage Service)
 
