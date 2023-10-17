@@ -1606,7 +1606,7 @@
   - `Fn:ImportValue`
   - E.g. passing export values to many stacks (e.g. VPC Id)
 - StackSets
-  - Across multiple accounts and/or regions
+  - Deploy across multiple accounts and/or regions
 - Drift
   - Caused by manual changes
   - Q: Can we periodically monitor all stacks for drift?
@@ -2725,7 +2725,7 @@
   - ELB to EC2 Servers
 - Route 53 can simplify this to our users, of course
 
-## AWS CI/CD
+## AWS CI/CD (CICD)
 
 - Tools
   - CodeSuite
@@ -2736,137 +2736,156 @@
   - CodeStar (management of the above, but EOL is 2024-07 -- to be replaced by CodeCatalyst)
   - CodeArtifact
   - CodeGuru (automated code reviews)
-- CodeSuite
-  - CodeCommit -- private Git repos, Minimal UI
-    - Alternatives: GitHub or Bitbucket
-    - Authentication
-      - SSH Keys (not available for root IAM user)
-      - HTTPS
-        - Git Credentials for IAM user (preferred) -- creates codecommit-specific username/password
-        - AWS CLI Credential Helper
-        - HTTPS(GRC) for `git-remote-codecommit`
-    - Authorization -- IAM policies
-      - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
-      - Can deny modification of `refs/heads/main`, etc.
-        - `codecommit:{GitPush,DeleteBranch,PutFile,Merge{Branches,PullRequest}By{FastForward,Squash,ThreeWay}}`
-    - Encryption -- KMS available
-    - Pull Requests
-      - May define Pull Request Approval Rules
-        - Pool of approvers (IAM users, federated users, IAM Roles, IAM Groups)
-        - Number of approvals required
-        - Approval rule templates, e.g. for dev vs prod
-    - Notifications
-      - May be "full" or "basic"
-        - "Basic" -- same info as sent to EventBridge or CloudWatch
-      - `codecommit-repository-{comments-on-{commits,pull-requests},approvals-{status-changed,rule-override},pull-request-{created,source-updated,status-changed,merged},branches-and-tags-{created,updated,deleted}}`
-      - Useful for cross-region replication
-      - SNS topic
-      - Lambda
-      - Q: Also AWS Chatbot (Slack)?
-    - Note: Triggers may be per-branch (up to 10 named branches)
-  - CodeBuild (building and testing)
-    - Alternatives
-      - Jenkins CI
-      - CodeBuild Local Build (for deep troubleshooting) -- requires Docker and CodeBuild Agent
-    - `buildspec.yml` (in project root by default)
-      - `env`
-        - `variables` (plaintext, e.g. `JAVA_HOME`)
-        - `parameter-store` (SSM (systems manager) Parameter Store, including KMS-encrypted secrets)
-        - `secrets-manager` (AWS Secrets Manager)
-      - `phases`
-        - `install`, e.g. `apt-get update && apt-get install -y maven` Q: Why not in the image?
-        - `pre-build`, e.g. `docker login`
-        - `build`, e.g. `mvn install`
-        - `post-build`, e.g. packing artifacts
-      - `artifacts`
-        - `files`, e.g. which artifacts toA upload to S3
-      - `cache`
-        - `paths`, e.g. `"/root/.m2/**/*"`
-    - Environment variables
-      - `CODEBUILD_KMS_KEY_ID` (arn:aws:kms:region-ID:account-ID:key/key-ID or alias/key-alias)
-      - `CODEBUILD_LOG_PATH`
-    - Output logs in S3 or CloudWatch Logs
-    - Events
-      - `codebuild-project-build-{state-{failed,in-progress,succeeded},phase-{failure,success}}`
-    - Build stats in CloudWatch Metrics
-    - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
-      - Or provide your own Docker container.
-    - Can run integration tests
-    - Can optionally store reusable artifacts in an S3 bucket
-    - Resulting artifacts in an S3 bucket
-    - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
-      - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
-      - Q: How do I manually run integration tests on a dev branch?
-  - AWS Elastic Beanstalk
-    - Alternative: CodeDeploy
-    - Controlled by `appspec.yml`
-      - `files` -- list of source/destination pairs
-      - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
-        - List of tuples -- script `location`, `timeout`, `runas`
-    - Targets:
-      - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
-        - Depends upon each EC2 instance having a tag identifying its environment
-        - Q: Why isn't codedeploy-agent installable as a yum package???
-        - EC2 instances must have authorization to access deployment bundles in S3
-      - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
-        - In-place deployment
-        - Blue/Green -- new ASG created
-          - ELB mandatory
-          - Choose how long to retail old ASG (and EC2 instances thereof)
-      - Lambda functions
-        - Traffic shift integrated within SAM (Serverless Application Model) framework
-        - Simply changes the percentages for the PROD (or whatever) alias.
-          - `LambdaLinear10PercentEvery3Minutes`
-          - `LambdaLinear10PercentEvery10Minutes`
-          - `LambdaCanary10Percent5Minutes` (and then 100%)
-          - `LambdaCanary10Percent30Minutes` (and then 100%)
-          - `AllAtOnce`
-      - ECS Platform
-        - Only Blue/Green deployments; switch occurs in ALB
-        - `ECSLinear10PercentEvery3Minutes`
-        - `ECSLinear10PercentEvery10Minutes`
-        - `ECSCanary10Percent5Minutes` (and then 100%)
-        - `ECSCanary10Percent30Minutes` (and then 100%)
+
+### CodeSuite
+
+#### CodeCommit
+
+- CodeCommit -- private Git repos, Minimal UI
+  - Alternatives: GitHub or Bitbucket
+  - Authentication
+    - SSH Keys (not available for root IAM user)
+    - HTTPS
+      - Git Credentials for IAM user (preferred) -- creates codecommit-specific username/password
+      - AWS CLI Credential Helper
+      - HTTPS(GRC) for `git-remote-codecommit`
+  - Authorization -- IAM policies
+    - Cross-account -- IAM Rol + AWS STS (`AssumeRole` API)
+    - Can deny modification of `refs/heads/main`, etc.
+      - `codecommit:{GitPush,DeleteBranch,PutFile,Merge{Branches,PullRequest}By{FastForward,Squash,ThreeWay}}`
+  - Encryption -- KMS available
+  - Pull Requests
+    - May define Pull Request Approval Rules
+      - Pool of approvers (IAM users, federated users, IAM Roles, IAM Groups)
+      - Number of approvals required
+      - Approval rule templates, e.g. for dev vs prod
+  - Notifications
+    - May be "full" or "basic"
+      - "Basic" -- same info as sent to EventBridge or CloudWatch
+    - `codecommit-repository-{comments-on-{commits,pull-requests},approvals-{status-changed,rule-override},pull-request-{created,source-updated,status-changed,merged},branches-and-tags-{created,updated,deleted}}`
+    - Useful for cross-region replication
+    - SNS topic
+    - Lambda
+    - Q: Also AWS Chatbot (Slack)?
+  - Note: Triggers may be per-branch (up to 10 named branches)
+
+#### CodeBuild
+
+- CodeBuild (building and testing)
+  - Alternatives
+    - Jenkins CI
+    - CodeBuild Local Build (for deep troubleshooting) -- requires Docker and CodeBuild Agent
+  - `buildspec.yml` (in project root by default)
+    - `env`
+      - `variables` (plaintext, e.g. `JAVA_HOME`)
+      - `parameter-store` (SSM (systems manager) Parameter Store, including KMS-encrypted secrets)
+      - `secrets-manager` (AWS Secrets Manager)
+    - `phases`
+      - `install`, e.g. `apt-get update && apt-get install -y maven` Q: Why not in the image?
+      - `pre-build`, e.g. `docker login`
+      - `build`, e.g. `mvn install`
+      - `post-build`, e.g. packing artifacts
+    - `artifacts`
+      - `files`, e.g. which artifacts toA upload to S3
+    - `cache`
+      - `paths`, e.g. `"/root/.m2/**/*"`
+  - Environment variables
+    - `CODEBUILD_KMS_KEY_ID` (arn:aws:kms:region-ID:account-ID:key/key-ID or alias/key-alias)
+    - `CODEBUILD_LOG_PATH`
+  - Output logs in S3 or CloudWatch Logs
+  - Events
+    - `codebuild-project-build-{state-{failed,in-progress,succeeded},phase-{failure,success}}`
+  - Build stats in CloudWatch Metrics
+  - Supplied build containers (Docker Image) -- Java, Ruby, Python, Go, Node.js, Android, .NET Core, PHP
+    - Or provide your own Docker container.
+  - Can run integration tests
+  - Can optionally store reusable artifacts in an S3 bucket
+  - Resulting artifacts in an S3 bucket
+  - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
+    - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
+    - Q: How do I manually run integration tests on a dev branch?
+
+#### AWS Elastic Beanstalk
+
+- AWS Elastic Beanstalk
+  - Alternative: CodeDeploy
+  - Controlled by `appspec.yml`
+    - `files` -- list of source/destination pairs
+    - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
+      - List of tuples -- script `location`, `timeout`, `runas`
+  - Targets:
+    - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
+      - Depends upon each EC2 instance having a tag identifying its environment
+      - Q: Why isn't codedeploy-agent installable as a yum package???
+      - EC2 instances must have authorization to access deployment bundles in S3
+    - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
+      - In-place deployment
+      - Blue/Green -- new ASG created
+        - ELB mandatory
+        - Choose how long to retail old ASG (and EC2 instances thereof)
+    - Lambda functions
+      - Traffic shift integrated within SAM (Serverless Application Model) framework
+      - Simply changes the percentages for the PROD (or whatever) alias.
+        - `LambdaLinear10PercentEvery3Minutes`
+        - `LambdaLinear10PercentEvery10Minutes`
+        - `LambdaCanary10Percent5Minutes` (and then 100%)
+        - `LambdaCanary10Percent30Minutes` (and then 100%)
         - `AllAtOnce`
-      - On-prem
-    - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
-    - Automated rollback
-      - Rollbacks are a _new_ deployment to a last known-good revision
-  - CodePipeline -- Visual Workflow to Orchestrate the above via S3 artifacts
-    - Runs using a service role
-    - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
-    - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, etc
-    - Stage -- Mandatory "Deploy Provider"
-      - CloudFormation
-      - CloudDeploy
-      - Elastic Beanstalk
-      - Service Catalog (Q:???)
-      - ECS
-      - ECS (Blue/Green)
-      - S3
-    - Events
-      - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
-    - Triggered by either:
-      - CloudWatch Events (recommended)
-        - Can be triggered by a _GitHub App_ -- "CodeStar Source Connection"
-      - Webhooks (older)
-      - Polling for changes
-    - Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
-    - Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
-      - Manual-approval steps
-        - Optional SNS topic
-        - Optional URL giving context to the reviewer
-        - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
-      - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
-    - Note: Actions are performed in parallel; action groups are performed sequentially
-      - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
+    - ECS Platform
+      - Only Blue/Green deployments; switch occurs in ALB
+      - `ECSLinear10PercentEvery3Minutes`
+      - `ECSLinear10PercentEvery10Minutes`
+      - `ECSCanary10Percent5Minutes` (and then 100%)
+      - `ECSCanary10Percent30Minutes` (and then 100%)
+      - `AllAtOnce`
+    - On-prem
+  - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
+  - Automated rollback
+    - Rollbacks are a _new_ deployment to a last known-good revision
+
+#### CodePipeline
+
+- CodePipeline -- Visual Workflow to Orchestrate the above via S3 artifacts
+  - Runs using a service role
+  - Requires a single "Source Provider" -- Github, S3, ECR, or CodeCommit
+  - Stage -- Optional "Build Provider" -- Jenkins, CodeBuild, etc
+  - Stage -- Mandatory "Deploy Provider"
+    - CloudFormation
+    - CloudDeploy
+    - Elastic Beanstalk
+    - Service Catalog (Q:???)
+    - ECS
+    - ECS (Blue/Green)
+    - S3
+  - Events
+    - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
+  - Triggered by either:
+    - CloudWatch Events (recommended)
+      - Can be triggered by a _GitHub App_ -- "CodeStar Source Connection"
+    - Webhooks (older)
+    - Polling for changes
+  - Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
+  - Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
+    - Manual-approval steps
+      - Optional SNS topic
+      - Optional URL giving context to the reviewer
+      - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
+    - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
+  - Note: Actions are performed in parallel; action groups are performed sequentially
+    - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
       - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
+
+#### CodeStar
+
 - CodeStar (management of the above, but EOL is 2024-07 -- to be replaced by CodeCatalyst)
   - Unitary dashboard, but limited customization
   - Lots of templates, e.g. C#, Go, HTML5, Java, Node.js, PHP, Python, Ruby
     - For example, Express.js has Lambda, Elastic Beanstalk, and EC2 templates
   - Issue tracking with JIRA or GitHub
   - Cloud9 web IDE (most regions)
+
+#### CodeArtifact
+
 - CodeArtifact (build and publish software packages)
   - Artifact management
     - Domains contain Repositories
@@ -2876,6 +2895,9 @@
       - Network security, caching (but not intermediate repos)
   - Events to EventBridge
   - Integrates with Maven, Gradle, npm, yarn, twine (Python), pip (Python), NuGet (.NET)
+
+### CodeGuru
+
 - CodeGuru (automated code reviews using ML)
   - CodeGuru Reviewer
     - Currently Java and Python
@@ -2886,6 +2908,9 @@
     - Application performance recommendations
     - AWS or on-prem
     - Minimum overhead
+
+### Cloud9
+
 - AWS Cloud9 (Cloud-based IDE)
   - Each Cloud9 environment requires an EC2 instance (type can't be changed after creation)
 
