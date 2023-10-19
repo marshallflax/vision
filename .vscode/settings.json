@@ -33,6 +33,7 @@
         "ebextensions",
         "ECMP",
         "exfiltration",
+        "Fanout",
         "Fargate",
         "fileb",
         "Flink",

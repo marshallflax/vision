@@ -1418,7 +1418,6 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
-
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
@@ -1429,13 +1428,11 @@
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
+    - ```mermaid
+      graph LR
 
-  ```mermaid
-  graph LR
-
-  CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
-  ```
-
+      CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
+      ```
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
@@ -3374,3 +3371,90 @@
         SecretId: !Ref MyRDSDBInstanceRotationSecret
         TargetId: !Ref MyRDSDBInstance
   ```
+
+## Misc
+
+### Serverless architecture <https://www.youtube.com/watch?v=9IYpGTS7Jy0> (Heitor Lessa)
+
+- Pillars: operations, reliability, security, performance, cost
+- Example code
+  - <https://github.com/aws-samples/aws-serverless-airline-booking/tree/archive>
+  - <https://github.com/amazon-archives/realworld-serverless-application> (and wiki thereof)
+- Internal components
+  - Resolvers
+    - Query
+    - Mutation
+  - Data Sources
+    - DynamoDB
+    - Lambda
+    - Step Functions
+    - RDS
+- Best practices
+  - Enable access logs, structure logs into consistent json, and instrument your code
+  - CloudWatch Embedded Metric Format (EMF) for async metrics from Lambda
+    - Just include metrics (up to 100) in the JSON logging
+  - Regulate inbound access rate 
+    - Simplistic -- limit Lambda concurrency
+    - Async -- place Kinesis Data Streams (or SQS) between API Gateway and Lambda 
+      - Optional batching window for efficiency
+      - Lambda Destinations rather than DLQ for failures
+  - Authorize customers; manage secrets with Secrets Manager
+    - If using parameter store, note default QPS is about 1000/s
+  - For DynamoDB, on-demand tables work well to 40K r/w request units
+  - Regional endpoints support HTTP/2
+  - Lambda Power Tuning is cool
+- GraphQL -- AWS AppSync (and Cognito) + DynamoDB
+  - Apache Velocity templates for simple CRUD
+  - Lambda for complex logic
+  - Pipeline resolvers for simple transactions
+  - State machines (AWS Step Functions) for long transactions
+  - Enforce AuthZ at API, data field, and operation level
+  - Can mix-and-match DB (e.g. DynamoDB for most stuff, but Elastic Search for specific fields)
+  - Enable selective caching
+- Fanout
+  - Option: API Gateway to SNS
+  - Option: API Gateway to SNS to SQS
+
+### Vue.js
+
+- Features
+  - Declarative rendering
+  - Reactivity via virtual DOM
+- APIs -- Options and Composition (newer)
+- Single-File Component (SRC) -- `.vue`
+  ```vue
+  <script setup>
+  import { ref } from 'vue'
+  const count = ref(0)
+  </script>
+
+  <template>
+    <button @click="count++">Count is: {{ count }}</button>
+  </template>
+
+  <style scoped>
+  button {
+    font-weight: bold;
+  }
+  </style>
+  ```
+
+### To Learn
+
+- Apache NiFi -- digraphs of data routing/transformation/etc
+- Apache Avro -- row-oriented data serialization (and RPC) framework (originally for Hadoop)
+  - Schemas written in Avro IDL or JSON
+    - `type`
+      - Complex: "record", "enum", "array", "map", "union", "fixed" (number of bytes)
+      - Primitive: "null", "boolean", "int", "long", "float", "double", "bytes", "string"
+    - `name` -- fieldName
+    - `default`
+    - `fields` -- list of name/type/default tuples
+  - Serialized to JSON or binary
+  - Not column-oriented like ORC or Parquet
+- Apache Spark -- large-scale data processing (especially for real-time processing and iterative analytics)
+  - Resilient Distributed Datasets (RDD) 
+  - Python and Scala
+- Elastic MapReduce (EMR)
+  - Java, Hive, Pig, Cascading, Ruby, Perl, Python, R, PHP, C++, Node.js
+- AWS Amplify
