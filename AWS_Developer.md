@@ -1418,9 +1418,11 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
+
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
+
     - Collection of AWS resources running one version at a time
     - Tiers
       - Web server environment tier (servicing HTTP)
@@ -1433,6 +1435,7 @@
 
       CreateApp-->UploadVersion-->LaunchEnvironment-->ManageEnvironment
       ```
+
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
@@ -2870,6 +2873,16 @@
   - Stage -- Optional "Test" -- CodeBuild, AWS Device Farm, 3rd-party tools
   - Stage -- Mandatory "Deploy Provider"
     - CloudFormation
+      - Action Modes
+        - ChangeSets
+          - Create or Replace
+          - Execute (e.g., after approval)
+        - Stacks
+          - Create or Update (`CREATE_UPDATE`)
+          - Delete (`DELETE_ONLY`) -- e.g. discard testing environment after integration testing
+          - Replace Failed
+      - Template parameter overrides (static and dynamic)
+        - Retrieves a json-formatted parameter from an Input Artifact (`Fn::GetParam`)
     - CloudDeploy
     - Elastic Beanstalk
     - Service Catalog (Q:???)
@@ -2878,6 +2891,8 @@
     - S3
   - Stage -- Optional "Invoke" -- Lambda, Step Functions
   - Manual approval can be required before any stage
+    - `codepipeline:GetPipeline*` against the pipeline resource
+    - `codepipeline:PutApprovalResult` against the pipeline/stage/approvalAction resource
 - Events
   - `codepipeline-pipeline-{action-executed-{started,cancelled,failed,succeeded},stage-execution-{started,succeeded,resumed,canceled,failed},pipeline-execution-{started,cancelled,resumed,failed,succeeded,superseded},pipeline-manual-approval-{needed,failed,succeeded}}`
   - Triggered by either:
@@ -2889,15 +2904,47 @@
     - A failed stage stops the pipeline and the console will show that
     - CloudTrail can be useful to audit AWS API calls to understand why a stage failed
 - Output artifacts may be `CODEBUILD_CLONE_REF` or `CODE_ZIP` (default and recommended)
-- Can add additional stages, each with multiple "action group"s, each with multiple actions (Approval, Build, Deploy, etc)
+- Can add additional stages, each with multiple "action group"s, each of which with multiple actions (Approval, Build, Deploy, etc)
   - Manual-approval steps
     - Optional SNS topic
     - Optional URL giving context to the reviewer
-    - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM actions
+    - Requires `codepipeline:{GetPipelines*,PutApprovalResult}` IAM permission
   - CloudFormation -- deploy infrastructure and app, and later on delete test infrastructure
 - Note: Actions are performed in parallel; action groups are performed sequentially
   - Action Types: Source, Build, Test, Approval (owner is "AWS"), Invoke, Deploy
     - Actions have input artifacts (frequently 0, 1, or 1-4) and output artifacts (frequently 1, or 0, or 0-5) -- <https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#reference-action-artifacts>
+- Actions
+  | Owner | Type | Provider | # Input Artifacts | # Output Artifacts |
+  | ------ | -------- | ------------------------------------------------------------------------ | ----------------- | ------------------ |
+  | AWS | Source | S3, CodeCommit, ECR | 0 | 1 |
+  | 3rd | Source | GitHub | 0 | 1 |
+  | AWS | Build | CodeBuild | 1-5 | 0-5 |
+  | Custom | Build | Jenkins | 0-5 | 0-5 |
+  | AWS | Test | CodeBuild | 1-5 | 0-5 |
+  | AWS | Test | DeviceFarm | 1 | 0 |
+  | Custom | Test | Jenkins | 0-5 | 0-5 |
+  | AWS | Approval | Manual | 0 | 0 |
+  | AWS | Deploy | S3, CodeDeploy, Elastic Beanstalk, OpsWorks Stacks, ECS, Service Catalog | 0 | 1 |
+  | AWS | Deploy | CloudFormation (perhaps CDK or SAM) and CloudFormation StackSets | 0-10 | 0-1 |
+  | 3rd | Deploy | Alexa Skills Kit | 1-2 | 0 |
+  | AWS | Invoke | Lambda | 0-5 | 0-5 |
+  | AWS | Invoke | Step Functions | 0-1 | 0-1 |
+- Best practices
+  - One CodePipeline, one CodeDeploy, parallel deployment groups
+  - Note: duplicate `RunOrder` values cause parallel execution
+  - Manual approval between PreProd CodeDeploy and Prod CodeDeploy
+  - EventBridge to detect and react to stage failures, etc
+  - Invoking actions
+    - Lambda
+    - Step Functions
+      - Populate tables
+      - Start ECS Tasks for load testing
+- Multi-region
+  - E.g., deploying Lambda code to multiple regions
+  - CodeBuild will need to create one template YAML file per region, of course
+  - Requirement: S3 Artifact Store in each region in which you have actions
+    - Of course, CodePipeline IAM must have rights thereof
+    - But CodePipeline will automatically handle cross-region artifact propagation
 
 #### CodeStar
 
@@ -3393,9 +3440,9 @@
   - Enable access logs, structure logs into consistent json, and instrument your code
   - CloudWatch Embedded Metric Format (EMF) for async metrics from Lambda
     - Just include metrics (up to 100) in the JSON logging
-  - Regulate inbound access rate 
+  - Regulate inbound access rate
     - Simplistic -- limit Lambda concurrency
-    - Async -- place Kinesis Data Streams (or SQS) between API Gateway and Lambda 
+    - Async -- place Kinesis Data Streams (or SQS) between API Gateway and Lambda
       - Optional batching window for efficiency
       - Lambda Destinations rather than DLQ for failures
   - Authorize customers; manage secrets with Secrets Manager
@@ -3417,15 +3464,23 @@
 
 ### Vue.js
 
+- Videos
+  - <https://www.youtube.com/watch?v=CvWcKQYldUw>
 - Features
   - Declarative rendering
-  - Reactivity via virtual DOM
+  - Reactivity via virtual DOM (state included within `{{ }}`)
+    - Conditional -- `v-if` (truthy) and `v-else`
+    - Callbacks -- `v-on:click="callback()"`
+      - Can `$emit` other events
+    - Models -- `v-model` and `defineModule<string>()`
 - APIs -- Options and Composition (newer)
-- Single-File Component (SRC) -- `.vue`
-  ```vue
-  <script setup>
-  import { ref } from 'vue'
-  const count = ref(0)
+- Single-File Component (SFC) -- `.vue`
+
+  ```html
+  // Composition API
+  <script setup lang="ts" generic="T">
+    import { ref } from "vue";
+    const count = ref(0);
   </script>
 
   <template>
@@ -3433,11 +3488,20 @@
   </template>
 
   <style scoped>
-  button {
-    font-weight: bold;
-  }
+    button {
+      font-weight: bold;
+    }
   </style>
   ```
+
+- `defineComponent` expects a function which accepts a props record and returns a callback returning JSX
+- Vue 3.3
+  - Compiler magic: result of `defineProps` can now be destructured (with optional defaults) into reactive vars
+  - `defineEmits` now uses "labelled tuples" syntax
+  - `defineSlots` (sub-JSX) now has typed slots
+  - Imported types
+  - Generic Components
+  - Be sure to enable `"jsxImportSource":"vue"` in jsconfig.json's "compilerOptions"
 
 ### To Learn
 
@@ -3453,7 +3517,7 @@
   - Serialized to JSON or binary
   - Not column-oriented like ORC or Parquet
 - Apache Spark -- large-scale data processing (especially for real-time processing and iterative analytics)
-  - Resilient Distributed Datasets (RDD) 
+  - Resilient Distributed Datasets (RDD)
   - Python and Scala
 - Elastic MapReduce (EMR)
   - Java, Hive, Pig, Cascading, Ruby, Perl, Python, R, PHP, C++, Node.js
