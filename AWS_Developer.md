@@ -2793,7 +2793,6 @@
 #### CodeBuild
 
 - CodeBuild (building and testing)
-
   - Alternatives
     - Jenkins CI
     - CodeBuild Local Build (for deep troubleshooting) -- requires Docker and CodeBuild Agent
@@ -2839,7 +2838,6 @@
     | `CODEBUILD_WEBHOOK_HEAD_REF` | The head reference name of the webhook event that triggers the current build. It can be a branch reference or a tag reference. |
     | `CODEBUILD_WEBHOOK_TRIGGER` | Shows the webhook event that triggered the build. This variable is available only for builds triggered by a webhook. The value is parsed from the payload sent to CodeBuild by GitHub, GitHub Enterprise Server, or Bitbucket. The value's format depends on what type of event triggered the build. For builds triggered by a pull request, it is pr/pull-request-number. For builds triggered by creating a new branch or pushing a commit to a branch, it is branch/branch-name. For builds triggered by a pushing a tag to a repository, it is tag/tag-name. |
     | `HOME` | This environment variable is always set to /root. |
-
   - Build projects may be defined in CodePipeline or CodeBuild
   - Output logs in S3 and/or CloudWatch Logs
   - CloudWatch Metrics for build statistics
@@ -2856,6 +2854,71 @@
   - By default, builds run outside your VPCs, but you can specify a VPC config (VPC ID, Subnet IDs, Security Group IDs) to access resources in your VPC (e.g. RDS, ElastiCache, EC2, ALB, etc)
     - Q: What happens if you want the build itself to be outside your VPC but integration testing within your VPC?
     - Q: How do I manually run integration tests on a dev branch?
+  - Security
+    - CodeBuild Service Role
+      - Download code
+      - Fetch from SSM and Secrets Manager
+      - Upload to S3
+      - Store logs in CloudWatch Logs
+  - Build Badges (exposed via public URL, compatible with CodeCommit, GitHub, BitBucket)
+    - Dynamically shows status of latest build, at the branch level
+  - Triggers
+    - EventBridge
+    - EventBridge to Lambda
+    - GitHub web hook
+- CodeBuild Test Reports
+  - Unit tests, configuration tests, functional tests
+  - 3rd-party `file-format`s -- JUnit XML, NUnit XML, NUnit3 XML, Cucumber JSON, TestNG XML, Visual Studio TRX
+  - Add `reports:` to `buildspec.yml`
+
+### AWS CodeDeploy
+
+- Defined by `appspec.yml`
+- Gradually deploy new app versions to EC2, Lambda, ECS, on-prem
+  - In-place and blue/green
+    - `AllAtOnce`
+    - `HalfAtATime`
+    - `OneAtATime`
+    - Custom
+  - And automated rollbacks if deployment fails or CloudWatch Alarm fires
+- EC2 (and on-premises)
+  - Requires CodeDeploy Agent
+    - Stops traffic from ALB before update and re-enabled afterwards
+    - Hooks: (`Start`), `BeforeBlockTraffic`, (`BlockTraffic`), `AfterBlockTraffic`, `ApplicationStop`, (`DownloadBundle`), `BeforeInstall`, (`Install`), `AfterInstall`, `ApplicationStart`, `ValidateService`, `BeforeAllowTraffic`, (`AllowTraffic`), `AfterAllowTraffic`, (`End`)
+      - Specified in `appspec.yml`, with `location`, `timeout`, `runas`
+        - `${DEPLOYMENT_GROUP_NAME}`
+    - Blue/Green (requires load balancer, of course)
+      - Deployment
+        - Option: Manual deployment -- identify EC2 instances by tag
+        - Option: Automatic deployment -- the "Blue" ASG is duplicated as a "Green" ASG
+      - Termination
+        - Option: Blue instances terminated after a wait (default 1h, max 2d)
+        - Option: Blue instances deregistered from ELB and deployment group but kept alive
+      - Hooks
+        - `BeforeBlockTraffic` and `AfterBlockTraffic` run on Blue ... all other hooks run on Green
+    - Configurations -- `CodeDeployDefault.AllAtOnce`, `CodeDeployDefault.HalfAtATime`, `CodeDeployDefault.OneAtATime`, custom
+    - Triggers
+      - Deployment and/or EC2 instance events to SNS 
+        - `DeploymentSuccess`, `DeploymentFailure`, `InstanceFailure`
+  - EC2 instances must have perms to the S3 bucket containing deployment bundles
+  - Deploy to instances defined by EC2 Tags or ASG
+- Lambda
+  - Integrated with SAM framework
+  - CodeDeploy will alter percentages for the version mapping to a prod alias
+    - `LambdaLinear10PercentEvery3Minutes`, `LambdaLinear10PercentEvery10Minutes`, `LambdaCanary10Percent5Minutes`, `LambdaCanary10Percent30Minutes`, `AllAtOnce`
+- ECS
+  - Only Blue/Green deployments
+  - Only behind an ALB
+  - Does not require CodeDeploy Agent, of course
+  - `appspec.yml` (in an S3 bucket)
+    - `TaskDefinition`
+      - ECS Task Definition Revision
+      - References new Container Image (in ECR)
+    - `LoadBalancerInfo`
+  - Strategies -- `ECSLinear10PercentEvery3Minutes`, `ECSLinear10PercentEvery10Minutes`, `ECSCanary10Percent5Minutes`, `ECSCanary10Percent30Minutes`, `AllAtOnce`
+    - You can define a 2nd ELB Test Listener against Green to validate new code before shifting traffic
+  - Lambda hooks
+    - (`Start`), `BeforeInstall`, (`Install`), `AfterInstall`, (`AllowTestTraffic`), `AfterAllowTestTraffic`, `BeforeAllowTraffic`, (`AllowTraffic`), `AfterAllowTraffic`
 
 #### AWS Elastic Beanstalk
 
