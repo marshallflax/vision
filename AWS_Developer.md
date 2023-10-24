@@ -2898,14 +2898,20 @@
         - `BeforeBlockTraffic` and `AfterBlockTraffic` run on Blue ... all other hooks run on Green
     - Configurations -- `CodeDeployDefault.AllAtOnce`, `CodeDeployDefault.HalfAtATime`, `CodeDeployDefault.OneAtATime`, custom
     - Triggers
-      - Deployment and/or EC2 instance events to SNS 
+      - Deployment and/or EC2 instance events to SNS
         - `DeploymentSuccess`, `DeploymentFailure`, `InstanceFailure`
   - EC2 instances must have perms to the S3 bucket containing deployment bundles
   - Deploy to instances defined by EC2 Tags or ASG
-- Lambda
+- `AWS::Lambda::Function`
+  - Only Blue/Green deployments, of course
+  - _Both_ `CurrentVersion` and `TargetVersion` for the `Name` and `Alias` specified in `appspec.yml`
   - Integrated with SAM framework
+  - Does not require CodeDeploy Agent, of course
   - CodeDeploy will alter percentages for the version mapping to a prod alias
-    - `LambdaLinear10PercentEvery3Minutes`, `LambdaLinear10PercentEvery10Minutes`, `LambdaCanary10Percent5Minutes`, `LambdaCanary10Percent30Minutes`, `AllAtOnce`
+    - `LambdaLinear10PercentEvery{1Minute,{2,3,10}Minutes}`
+    - `LambdaCanary10Percent{5,10,15,30}Minutes`
+  - Lambda Hooks
+    - (`Start`), `BeforeALlowTraffic`, (`AllowTraffic`), `AfterAllowTraffic`, (`End`)
 - ECS
   - Only Blue/Green deployments
   - Only behind an ALB
@@ -2919,6 +2925,16 @@
     - You can define a 2nd ELB Test Listener against Green to validate new code before shifting traffic
   - Lambda hooks
     - (`Start`), `BeforeInstall`, (`Install`), `AfterInstall`, (`AllowTestTraffic`), `AfterAllowTestTraffic`, `BeforeAllowTraffic`, (`AllowTraffic`), `AfterAllowTraffic`
+- Rollbacks
+  - Automatic or Manual (or disabled)
+  - Implementation: a new deployment to the last known-good revision
+- Troubleshooting
+  - EC2 instance gotta have accurate time
+  - CodeDeploy Agent might not be installed, or its service role might not have permissions
+  - Set `:proxy_uri:` parameter if necessary
+  - Verify ELB health checks configuration
+- Really, AWS???
+  - ASG scale-out will be with v1, rather than v2. (But CodeDeploy will create a follow-on deployment to fix this.)
 
 #### AWS Elastic Beanstalk
 
@@ -3051,28 +3067,56 @@
 
 #### CodeArtifact
 
-- CodeArtifact (build and publish software packages)
-  - Artifact management
-    - Domains contain Repositories
-      - Resource policies are per-repo not per-artifact
-      - Deduplication within an entire domain (sharing a single KMS key)
-    - Proxies up to ten public artifact repos (e.g. npm, Maven)
-      - Network security, caching (but not intermediate repos)
-  - Events to EventBridge
-  - Integrates with Maven, Gradle, npm, yarn, twine (Python), pip (Python), NuGet (.NET)
+- Alternative: Nexus OSS
+- Artifact management
+  - Domains contain Repositories and can span accounts, all within a single region
+    - Resource policies are per-repo not per-artifact, and may be defined across an entire domain
+      - Each repository can have one upstream repo
+      - `codeartifact:{DescribePackageVersion,DescribeRepository,GetPackageVersionReadme,GetRepositoryEndpoint,ListPackages,ListPackageVersions,ListPackageVersionAssets,ListPackageVersionDependencies,ReadFromRepository}`
+    - Deduplication within an entire domain (sharing a single KMS key, typically an AWS-managed key)
+- Proxies up to ten public artifact repos (e.g. npm, Maven)
+  - Network security, caching (but not intermediate repos)
+- Package version events to EventBridge
+  - Can trigger CodePipeline to redeploy with library security fixes
+- Integrates with Maven, Gradle, npm, yarn, twine (Python), pip (Python), NuGet (.NET)
+  - `pip` -- `aws codeartifact login --tool pip --repository ${REPO_NAME} --domain ${DOMAIN} --domain-owner ${ACCT_ID} --region ${REGION}` (good for 12h)
+    - Or `pip3 config set global.index-url=https://aws:$TOKEN@$DOMAIN-$ACCT.d.codeartifact.$REGION.amazonaws.com/pypi/$REPO/simple/`
+- Pricing
+  - Free Tier -- 2GiB storage, 100000 req/month
+  - Otherwise -- 0.05USD/GiB/Month, 0.05USD/10k requests, 0.09USD/GiB egress
 
 ### CodeGuru
 
-- CodeGuru (automated code reviews using ML)
-  - CodeGuru Reviewer
-    - Currently Java and Python
-    - Integrates with BitBucker, GitHub, and AWS CodeCommit
-  - CodeGuru Profiler
-    - Requires Agent
-      - `MaxStackDepth`, `MemoryUsageLimitPercent`, `MinimumTimeForReportingInMilliseconds`, `ReportingIntervalInMilliseconds`, `SamplingIntervalInMilliseconds`
-    - Application performance recommendations
-    - AWS or on-prem
-    - Minimum overhead
+- CodeGuru Reviewer (ML-powered static code analysis)
+  - Currently Java and Python
+  - Integrates with BitBucker, GitHub, and AWS CodeCommit
+  - Detects
+    - Resource leaks
+    - Security vulnerabilities
+      - Hardcoded secrets/credentials/keys (including in config and documentation)
+    - Input validation
+- CodeGuru Profiler
+  - Requires Agent
+    - `MaxStackDepth`, `MemoryUsageLimitPercent`, `MinimumTimeForReportingInMilliseconds`, `ReportingIntervalInMilliseconds`, `SamplingIntervalInMilliseconds`
+  - Application performance recommendations
+  - AWS or on-prem
+    - Manual
+      - Lambda code can include `@with_lambda_profiler(profiling_group_name="MyGroup")` 
+      - Requires `codeguru_profiler_agent` in .zip or Lambda Layer
+    - Automatic -- just enable profiling in the function config
+  - Minimum overhead
+
+### EC2 Image Builder
+
+- Invoked from AWS CloudFormation, which can then do rolling updates
+- Starts with a bare-bones "Builder EC2" instance, to which build components are applied
+- New AMI is tested and then distributed (to multiple regions and/or accounts)
+
+### Remote Access Manager (RAM)
+
+- Share images, recipes, and components across AWS accounts (or throughout an AWS organization)
+- SSM Parameter Store can know the "latest" ami-ids.
+  - Image Builder -> SNS -> Lambda -> SSM 
 
 ### Cloud9
 
