@@ -80,6 +80,75 @@ graph LR;
 
 ---
 
+## Residential Solar (whole-house battery)
+
+<pack scale=0.90>
+
+```mermaid
+graph LR;
+ subgraph Sources["Energy Sources"]
+  direction LR;
+  Grid["Main North American Electrical Grid"]<-->Inverter
+  SolarPanels<-->Inverter["DC-to-AC Inverter and management"]-->ElectricPanel["Main 200Amp Panel"]
+  Battery<-->Inverter
+ end
+ subgraph House
+  Panel["200 Amp Panel"]-->Load1
+  Panel-->Load2
+  Panel-->Load3
+ end
+ Sources-->|120v and 60hz|House
+```
+
+- In normal operation, the DC-to-AC inverter gets its frequency and voltage from the North American Grid.
+  - The battery will charge during the day (and once full, the excess will go back onto the grid).
+  - The battery will discharge at night (and once at its minimum value, power will be drawn from the grid).
+- During a blackout, the inverter will disconnect from the grid and generate its own frequency and voltage references.
+  - The solar panels will continue to operate -- unless the battery is full.
+  - If the battery is full, the inverter will stop converting DC-to-AC and the house will run purely off the battery. Once the battery is down to 90% (or whatever), the solar panels will start generating power again.
+- If you're away during a summer blackout, your A/C is likely to drain the battery before you return.
+
+</pack>
+
+---
+
+## Residential Solar (subpanel)
+
+<pack scale=1.00>
+
+```mermaid
+graph LR;
+  direction LR;
+  subgraph Unprotected
+   direction TB
+   Grid["Main North American Electrical Grid"]<-->Panel
+   Panel["200 Amp Panel"]-->AC["Air Conditioning"]
+   Panel-->Load2["Most lighting"]
+   Panel-->Load3["Electric Water Heater"]
+  end
+  SolarPanels<-->Inverter["DC-to-AC Inverter and management"]<-->CriticalLoad
+  Inverter<-->Unprotected
+  Battery<-->Inverter
+  subgraph CriticalLoad["Critical Load Sub-grid"]
+   direction TB
+   SubPanel["60 Amp Critical Load Panel"]-->Furnace["Furnace and Blower"]
+   SubPanel-->Den["Den and Turtle"]
+   SubPanel-->WiFi
+   SubPanel-->Refrigerators
+   SubPanel-->Kitchen["Kitchen outlets"]
+  end
+```
+
+- In normal operation, priority of solar power use:
+  - 1st -- Sub-panel load
+  - 2nd -- Recharging battery
+  - 3rd -- Unprotected panel load
+  - 4th -- Excess to Grid
+
+</pack>
+
+---
+
 ```mermaid
 mindmap
  Solar
@@ -87,37 +156,13 @@ mindmap
    Super simple wiring
    No power during blackouts
    Only manual load shifting
-   Highest grid feedin
+   Highest grid power use
   Whole house battery
    Simple wiring
-   Least grid feedin
+   Least grid power use
    Optimized for short blackouts
     Unless you manually shut down all noncritical loads
   Critical load battery
    Complicated and inflexible wiring
    Most resilient during long blackouts
 ```
-
----
-
-```mermaid
-graph TB;
- PV <--> SubPanel
- SubPanel --> Turtle
- SubPanel --> Furnace
- SubPanel --> Refrigerator
- SubPanel <--> Battery
- SubPanel --> Blender
- SubPanel --> Wifi
- SubPanel --> Den
- Battery <--> MainPanel
- MainPanel --> A/C
- MainPanel --> MostCircuits
- MainPanel --> WaterHeater
- MainPanel <--> Meter
- MainPanel --> CeilingLights
- MainPanel --> LivingRoom
- MainPanel --> Bedrooms
- Meter <--> Grid
-```
-
