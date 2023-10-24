@@ -7,6 +7,7 @@
   },
   "scripts": {
     "slides": "slidev --open README.md",
+    "solar": "slidev --open solar.md",
     "exportPDF": "slidev export README.md"
   },
   "dependencies": {
