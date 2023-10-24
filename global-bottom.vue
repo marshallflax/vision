@@ -1,1 +1,1 @@
-<template><footer class="absolute bottom-0 left-0 right-0">https://github.com/marshallflax/vision/blob/main/solar.md -- <SlideCurrentNo/>/<SlidesTotal/></footer></template>
+<template><footer class="absolute bottom-0 right-0">https://github.com/marshallflax/vision/blob/main/solar.md -- <SlideCurrentNo/>/<SlidesTotal/></footer></template>

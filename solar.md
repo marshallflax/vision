@@ -49,7 +49,8 @@ graph LR;
 ```
 
 - Exactly the same as the Nano Grid, except that the law of large numbers means that the second-by-second variation of many users tends to cancel each other out.
-- A mix of slow-to-adjust (e.g. nuclear), medium-to-adjust (e.g. coal), and  fast-to-adjust (e.g. natural gas or hydro) power sources works well.
+- A mix of variable (e.g. solar and wind), slow-to-adjust (e.g. nuclear), medium-to-adjust (e.g. coal), fast-to-adjust (e.g. natural gas or hydro) power sources works well.
+  - BTW, a mix of utility-scale batteries (and other storage technologies) and smarter power management (e.g. smart thermostats, EV-to-Grid-to-EV, etc) can reduce the necessity of medium-to-adjust and fast-to-adjust sources.
 
 ---
 
@@ -114,7 +115,7 @@ graph LR;
 
 ## Residential Solar (subpanel)
 
-<pack scale=1.00>
+<pack scale=0.90>
 
 ```mermaid
 graph LR;
