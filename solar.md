@@ -82,7 +82,7 @@ graph LR;
 
 ## Residential Solar (whole-house battery)
 
-<pack scale=0.90>
+<pack scale=1.0>
 
 ```mermaid
 graph LR;
