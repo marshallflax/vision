@@ -1520,6 +1520,10 @@
   - VPC stacks
   - Network stacks
   - App stacks
+- Stacks may be nested (just a resource of Type `AWS::CloudFormation::Stack`)
+  - Useful for repeated patterns
+  - Useful for common components
+  - Never directly update a sub-stack
 
 ### CloudFormation Basics
 
@@ -1608,6 +1612,40 @@
 ### CloudFormation -- advanced topics
 
 - ChangeSets -- Essentially `--dry_run`
+  - But doesn't know if changes will succeed
+- DeletionPolicy
+  - `Retain`
+  - `Snapshot`
+    - EBS Volume (`AWS::EC2::Volume`), ElastiCache Cluster, ElastiCache ReplicationGroup, RDS DBInstance, RDS DBCluster, Redshift Cluster
+  - `Delete`
+    - Default (except for `AWS::RDS::DBCluster`)
+- TerminationProtection
+  - Requires `cloudformation:UpdateTerminationProtection`
+- UserData
+  - Encoded through `Fn::Base64`, but limited in size
+    - ```sh
+      #!/bin/bash -xe
+      yum install -y aws-cfn-bootstrap
+      /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource $RESOURCE 
+      /opt/aws/bin/cfn-signal  --stack ${AWS::StackName} --region ${AWS::Region} --resource $RESOURCE -e $? 
+      ```
+  - Output log in `/var/log/cloud-init-output.log`
+  - Alternative (python scripts)
+    - `cfn-init`
+      - Retrieves metadata and initialization config from CloudFormation
+      - Logs to `/var/log/cfn-init.log`
+    - `cfn-signal`
+      - `WaitCondition` blocks until signal received
+      - `CreationPolicy` (EC2, ASG)
+        - Specify `Timeout` (e.g. `PT5M`) and `Count` (e.g. `1`)
+    - `cfn-get-metadata`
+    - `cfn-hup` -- daemon checking for metadata updates, and executes hooks accordingly
+  - `AWS::CloudFormation::Init::{config,configSet}`
+    - `packages`
+    - `groups`, `users`
+    - `sources`, `files`
+    - `commands`
+    - `services`
 - Nested stacks (best practice)
   - Component reuse
   - Inner stack is essentially private
@@ -3412,14 +3450,22 @@
 ## AWS Amplify
 
 - Amplify -- "Elastic beanstalk for mobile and web"
+  - Code in CodeCommit, GitHub, Bitbucket, GitLab, or manually uploaded
   - Frontend
     - Amplify Studio
-    - Amplify CLI
-  - Backend
     - Amplify Libraries
       - React.js, Vue, JS, iOS, Android, Flutter, ...
+  - Backend
+    - Configured using Amplify CLI
     - Amplify Hosting (CDN)
-    - DynamoDB, Cognito, S3
+      - CloudFront
+    - API Gateway, DynamoDB, Cognito, S3, Lambda
+      - SageMaker
+      - Lex
+    - AppSync
+  - Build-and-deploy
+    - Amplify Console
+    - Can configure each CodeCommit branch to have its own deployment (typically connected to their own Route53 domain)
   - E2E testing in the "test phase"
     - `amplify.yml`
     - <https://www.cypress.io/>
