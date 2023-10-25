@@ -1604,6 +1604,9 @@
 - Stack Update error
   - Default is rollback to last known-working state, but can allow newly-created resources to stay (for debugging)
   - Logs are useful.
+- `UPDATE_ROLLBACK_FAILED`
+  - (Can be caused by missing external dependency, e.g. RDBMS)
+  - Will be stuck in this state until dependency is resolved or the stuck resources are skipped (i.e. by marking as `UPDATE_COMPLETE`).
 
 ### CloudFormation to SNS Topic
 
@@ -1626,8 +1629,8 @@
     - ```sh
       #!/bin/bash -xe
       yum install -y aws-cfn-bootstrap
-      /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource $RESOURCE 
-      /opt/aws/bin/cfn-signal  --stack ${AWS::StackName} --region ${AWS::Region} --resource $RESOURCE -e $? 
+      /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource ${RESOURCE_NAME}
+      /opt/aws/bin/cfn-signal  --stack ${AWS::StackName} --region ${AWS::Region} --resource ${RESOURCE_NAME} -e $?
       ```
   - Output log in `/var/log/cloud-init-output.log`
   - Alternative (python scripts)
@@ -1639,11 +1642,24 @@
       - `CreationPolicy` (EC2, ASG)
         - Specify `Timeout` (e.g. `PT5M`) and `Count` (e.g. `1`)
     - `cfn-get-metadata`
-    - `cfn-hup` -- daemon checking for metadata updates, and executes hooks accordingly
+    - `cfn-hup` -- daemon checking for metadata updates (every 15m), and executes hooks accordingly
+      - Configured at `/etc/cfn/cfn-hup.conf` and `/etc/cfn/hooks.d/cfn-auto-reloader.conf`
   - `AWS::CloudFormation::Init::{config,configSet}`
     - `packages`
     - `groups`, `users`
-    - `sources`, `files`
+    - `sources`
+    - `files`
+      ```yaml
+      "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+        content: !Sub |
+          [cfn-auto-reloader-hook]
+          triggers=post.update
+          path=Resources/WebServerHost.Metadata.AWS::CloudFormation::Init
+          action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource MyResource
+        mode: "000400"
+        owner: "root"
+        group: "root"
+      ```
     - `commands`
     - `services`
 - Nested stacks (best practice)
@@ -3139,7 +3155,7 @@
   - Application performance recommendations
   - AWS or on-prem
     - Manual
-      - Lambda code can include `@with_lambda_profiler(profiling_group_name="MyGroup")` 
+      - Lambda code can include `@with_lambda_profiler(profiling_group_name="MyGroup")`
       - Requires `codeguru_profiler_agent` in .zip or Lambda Layer
     - Automatic -- just enable profiling in the function config
   - Minimum overhead
@@ -3154,7 +3170,7 @@
 
 - Share images, recipes, and components across AWS accounts (or throughout an AWS organization)
 - SSM Parameter Store can know the "latest" ami-ids.
-  - Image Builder -> SNS -> Lambda -> SSM 
+  - Image Builder -> SNS -> Lambda -> SSM
 
 ### Cloud9
 
