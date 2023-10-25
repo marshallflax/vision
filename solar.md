@@ -194,5 +194,5 @@ graph TB;
     MainPanel-->Exterior
     MainPanel-->CarCharger["20A EV charger"]
   end
-    MainPanel<===>|Meter|Grid["AEP Grid"]
+    Grid["AEP Grid"]<==>|Bidirectional Meter|MainPanel
 ```
