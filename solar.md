@@ -172,18 +172,24 @@ mindmap
 
 ```mermaid
 graph TB;
+ Panels1["8 x 370W solar panels"]==>|"DC Current"|Inverter
+ Panels2["10 x 370W solar panels"]==>|"DC Current"|Inverter
  ExteriorRapidShutdown["Exterior Rapid Solar Shutdown"]-->|"low-voltage signal"|Inverter
- Panels1["8 x 370W solar panels"]-->|"DC Current"|Inverter
- Panels2["10 x 370W solar panels"]-->|"DC Current"|Inverter
- Inverter["SolarEdge 7.6KW Inverter"]-->|Manual shutoff, then 40A breaker|ProtectedPanel["100 Amp sub-panel (garage)"]
- ProtectedPanel<-->|"40A breaker"|Sonnen["SonnenCore 10KWH battery with integrated Inverter"]
- ProtectedPanel---->|"Tail run to basement"|Den
- ProtectedPanel---->|"Tail run to basement"|SumpPump
- ProtectedPanel---->|"Tail run to basement"|Furnace
- ProtectedPanel---->|"Tail run to basement"|Refrigerator
- ExteriorBatteryShutdown["Exterior Battery Shutdown"]-->|"low-voltage signal"|Sonnen
- Sonnen-->|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
- MainPanel<-->|Meter|Grid["AEP Grid"]
- MainPanel-->AC["A/C Compressor"]
- MainPanel-->BedRooms
+ Inverter["SolarEdge 7.6KW Inverter"]<==>|Manual shutoff, then 40A breaker|ProtectedPanel["100 Amp sub-panel (garage)"]
+ Sonnen<==>|"40A breaker"|ProtectedPanel
+  subgraph Protected
+    ProtectedPanel-->|"Via tail run to basement"|Den
+    ProtectedPanel-->|"Via tail run to basement"|SumpPump
+    ProtectedPanel-->|"Via tail run to basement"|KitchenOutlets
+    ProtectedPanel-->|"Via tail run to basement"|Furnace
+    ProtectedPanel-->|"Via tail run to basement"|Refrigerator
+  end
+ ExteriorBatteryShutdown["Exterior Battery Shutdown"]-->|"low-voltage signal"|Sonnen["SonnenCore 10KWH battery with integrated Inverter"]
+ Sonnen<==>|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
+  subgraph Unprotected
+    MainPanel-->AC["A/C Compressor"]
+    MainPanel-->BedRooms
+    MainPanel-->Exterior
+  end
+    MainPanel<===>|Meter|Grid["AEP Grid"]
 ```
