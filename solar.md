@@ -178,11 +178,13 @@ graph TB;
  Inverter["SolarEdge 7.6KW Inverter"]<==>|Manual shutoff, then 40A breaker|ProtectedPanel["100 Amp sub-panel (garage)"]
  Sonnen<==>|"40A breaker"|ProtectedPanel
   subgraph Protected
-    ProtectedPanel-->|"Via tail run to basement"|Den
-    ProtectedPanel-->|"Via tail run to basement"|SumpPump
-    ProtectedPanel-->|"Via tail run to basement"|KitchenOutlets
-    ProtectedPanel-->|"Via tail run to basement"|Furnace
-    ProtectedPanel-->|"Via tail run to basement"|Refrigerator
+    ProtectedPanel--->|"Tail run"|Den
+    ProtectedPanel--->|"Tail run"|SumpPump
+    ProtectedPanel--->|"Tail run"|KitchenOutlets
+    ProtectedPanel--->|"Tail run"|Furnace
+    ProtectedPanel--->|"Tail run"|Refrigerator
+    ProtectedPanel-->GaragePowerStrip
+    GaragePowerStrip-->CarCharger10["10A EV charger"]
   end
  ExteriorBatteryShutdown["Exterior Battery Shutdown"]-->|"low-voltage signal"|Sonnen["SonnenCore 10KWH battery with integrated Inverter"]
  Sonnen<==>|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
@@ -190,6 +192,7 @@ graph TB;
     MainPanel-->AC["A/C Compressor"]
     MainPanel-->BedRooms
     MainPanel-->Exterior
+    MainPanel-->CarCharger["20A EV charger"]
   end
     MainPanel<===>|Meter|Grid["AEP Grid"]
 ```
