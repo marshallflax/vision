@@ -113,7 +113,7 @@ graph LR;
 
 ---
 
-## Residential Solar (subpanel)
+## Residential Solar (sub-panel)
 
 <pack scale=0.90>
 
@@ -132,7 +132,7 @@ graph LR;
   Battery<-->Inverter
   subgraph CriticalLoad["Critical Load Sub-grid"]
    direction TB
-   SubPanel["60 Amp Critical Load Panel"]-->Furnace["Furnace and Blower"]
+   SubPanel["100 Amp Critical Load Panel"]-->Furnace["Furnace and Blower"]
    SubPanel-->Den["Den and Turtle"]
    SubPanel-->WiFi
    SubPanel-->Refrigerators
@@ -166,4 +166,24 @@ mindmap
   Critical load battery
    Complicated and inflexible wiring
    Most resilient during long blackouts
+```
+
+---
+
+```mermaid
+graph TB;
+ ExteriorRapidShutdown["Exterior Rapid Solar Shutdown"]-->|"low-voltage signal"|Inverter
+ Panels1["8 x 370W solar panels"]-->|"DC Current"|Inverter
+ Panels2["10 x 370W solar panels"]-->|"DC Current"|Inverter
+ Inverter["SolarEdge 7.6KW Inverter"]-->|Manual shutoff, then 40A breaker|ProtectedPanel["100 Amp sub-panel (garage)"]
+ ProtectedPanel<-->|"40A breaker"|Sonnen["SonnenCore 10KWH battery with integrated Inverter"]
+ ProtectedPanel---->|"Tail run to basement"|Den
+ ProtectedPanel---->|"Tail run to basement"|SumpPump
+ ProtectedPanel---->|"Tail run to basement"|Furnace
+ ProtectedPanel---->|"Tail run to basement"|Refrigerator
+ ExteriorBatteryShutdown["Exterior Battery Shutdown"]-->|"low-voltage signal"|Sonnen
+ Sonnen-->|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
+ MainPanel<-->|Meter|Grid["AEP Grid"]
+ MainPanel-->AC["A/C Compressor"]
+ MainPanel-->BedRooms
 ```
