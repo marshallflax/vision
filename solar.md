@@ -72,7 +72,7 @@ graph LR;
 ```
 
 - If the panels create more energy than the house needs, then the additional energy will simply flow onto the main grid.
-- The DC-to-AC inverter *must* exactly match the voltage and frequency of the grid -- otherwise the electric fields will cancel each other out and create damaging heat.
+- The DC-to-AC inverter _must_ exactly match the voltage and frequency of the grid -- otherwise the electric fields will cancel each other out and create damaging heat.
 - If the grid is down ("blackout") then:
   - No reference frequency and voltage
   - No place for excess energy to go
@@ -187,7 +187,7 @@ graph TB;
     GaragePowerStrip-->CarCharger10["10A EV charger"]
   end
  ExteriorBatteryShutdown["Exterior Battery Shutdown"]-->|"low-voltage signal"|Sonnen["SonnenCore 10KWH battery with integrated Inverter"]
- Sonnen<==>|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
+ Sonnen<=====>|"Run to basement, then exterior fused 60A disconnect, then 40A breaker"|MainPanel["Main 200Amp Panel (basement)"]
   subgraph Unprotected
     MainPanel-->AC["A/C Compressor"]
     MainPanel-->BedRooms
