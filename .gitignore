@@ -3,3 +3,5 @@ node_modules/
 AWS_Developer.pdf
 .Rproj.user
 graphs.nb.html
+.RData
+.Rhistory
