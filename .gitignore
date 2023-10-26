@@ -1,3 +1,5 @@
 node_modules/
 .secret
 AWS_Developer.pdf
+.Rproj.user
+graphs.nb.html

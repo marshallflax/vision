@@ -1,0 +1,30 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r library, cache=FALSE}
+library(tidyverse)
+library(tidyquant)
+library(anytime)
+```
+
+
+```{r}
+detailed <- read_csv("aep.csv", name_repair = "universal") %>%
+  transmute(when=anytime(paste(`DATE`,`START.TIME`)),
+            usage=`USAGE`,
+            date=`DATE`,
+            dollars=as.numeric(sub('\\$', '', `COST`)))
+
+daily <- detailed %>% 
+  group_by(date) %>%
+  summarize(kwh=sum(usage), daily_cost=sum(dollars))
+
+ggplot(daily, aes(date, daily_cost)) + geom_point() + geom_ma(ma_fun=SMA, n=30)
+ggplot(detailed, aes(when, usage)) + geom_point(alpha=0.01) + geom_ma(ma_fun=SMA, n=30*4*24)
+ggplot(detailed, aes(when, dollars)) + geom_point(alpha=0.01) + geom_ma(ma_fun=SMA, n=30*4*24)
+
+```
+
+
