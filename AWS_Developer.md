@@ -50,7 +50,7 @@
 
 #### Task 1 -- Authentication and Authorization
 
-- Federated -- Security Assertion Markup (SAML, using XML), OpenID Connect (OIDC, using JWTs), Amazon Cognito
+- Federated -- Security Assertion Markup (SAML, using XML), OpenID Connect (OIDC, using JWT), Amazon Cognito
 - Tokens -- JSON Web Token (JWT), OAuth, AWS Security Token Service (STS)
 - Cognito -- user pools and identity pools
 - Policies -- resource, service, principal, Role-based access control (RBAC), ACL, least privilege, customer vs AWS managed
@@ -179,6 +179,7 @@
 - Principles
   - Any explicit `DENY`, then any `ALLOW`, else `DENY`
   - S3 bucket policies are unioned in and then the above rule applies
+  - Can never exceed one's "permissions boundary"
 - Types
   - AWS-Managed -- Good for power users and admins
     - Automatically includes new services when appropriate
@@ -192,6 +193,14 @@
     - Not shown in IAM console!
 - IAM roles passed to AWS Services
   - Requires `iam:PassRole` (and `iam:GetRole` to see what's being passed)
+    - Q: If I have `iam:PassRole`, and grant a role to a stack, and then I lose `iam:PassRole`, can the stack still run?
+    - Note: PassRole must be intra-account
+    - Example
+      - An IAM _permissions policy_ (or use an AWS managed one)
+      - A _trust policy_ attached to the role
+        - `Principal` -- The AWS service acting on our behalf
+        - `Action` -- `sts:AssumeRole` (Security Token Service)
+      - Rights to `iam:PassRole` (and usually `iam:GetRole`) for the resources (i.e., roles) in question, e.g. `arn:aws:iam:${ACCOUNTID}:role/${ROLES}`
   - Requires that the service trusts (i.e. `sts:AssumeRole`) the role
 - "AWS Directory Service" (AD as a forest of trees of objects -- Users, Computers, Printers, File Shares, Security Groups)
   - AWS Managed Microsoft AD
@@ -1544,12 +1553,13 @@
     - Constraints -- Min/MaxLength, Min/MaxValue, Defaults, AllowedValues (array), AllowedPattern (regexp), NoEcho (boolean)
     - (used via `!Ref`)
       - Also pseudo-parameters: `AWS::{AccountId,Region,StackId,StackName,NotificationARNs,NoValue}`
-  - Mappings (static configuration) A
+  - Mappings (static configuration)
     - (used via `!FindInMap [ MapName, TopLevelKey, SecondLevelKey ]`)
       - Eg `!FindInMap [RegionAndArchToImage, !Ref "AWS::Region", 32]`
         - Q: Update example to have better map name?
+    - `Fn::GetAZs: !Ref 'AWS::Region'`
   - Outputs (optional references to created resources)
-    - (used via `!ImportValue`
+    - (used via `!ImportValue`)
     - Value (most likely a `!Ref`)
     - Export.Name (public name) -- must be unique within region for your entire account
     - (Typical use: VPC ID and Subnet IDs)
@@ -1608,7 +1618,39 @@
   - (Can be caused by missing external dependency, e.g. RDBMS)
   - Will be stuck in this state until dependency is resolved or the stuck resources are skipped (i.e. by marking as `UPDATE_COMPLETE`).
 
-### CloudFormation to SNS Topic
+### CloudFormation Custom Resources
+
+- Backed by (async) Lambda or (out of scope for exam) SNS
+  - Must be intra-region
+- Request contains:
+  - `RequestType` -- `Create`, `Read`, `Update`, `Delete`, or `List` ("CRUDL")
+  - `ResponseURL` -- Pre-signed S3 Url for response JSON
+  - `ResourceType` -- either `AWS::CloudFormation::CustomResource` or (recommended) `Custom::MyCustomResourceTypeName`
+  - `StackId`, `RequestId`, `LogicalResourceId`
+  - `ResourceProperties`
+- Response contains:
+  - `Status` -- "SUCCESS"
+  - `PhysicalResourceId`
+  - `StackId`, `RequestId`, `LogicalResourceId`
+  - `Data`
+- Useful for:
+  - On-prem resources
+  - Empty S3 bucket before deletion, etc
+
+### CloudFormation Service Roles
+
+- CF of course creates/updates/deletes stack resources for you
+  - By default using a temp session generated from operator's credentials
+  - Alternative (least privilege) : grant operator right to give `iam:PassRole` to CF to a Service role with the necessary AWS perms
+    - "MyUseCloudFormation": `cloudformation:*`, `s3:*`, `iam:PassRole`, `ssm:GetParameters`, `ec2:DescribeImages`
+    - Better: Add policies like `AmazonEC2FullAccess`, `AmazonSSMReadOnlyAccess`, etc 
+
+### CloudFormation -- SSM Parameter Type
+
+- "SSM" is Systems Manager Parameter Store 👎
+- CloudFormation always fetches current value for the key
+
+### CloudFormation events to SNS Topic
 
 - Once enabled, all events go to the topic (but can filter via Lambda to a 2nd topic)
 
@@ -2014,7 +2056,7 @@
       - Fargate -- can only use sidecar
     - Of course, in all cases, needs IAM rights to write to X-Ray
   - API
-    - Writing -- `PutTraceSegments`, `PutTelemetryReco/0x08rds`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
+    - Writing -- `PutTraceSegments`, `PutTelemetryRecords`, `GetSamplingRules`, `GetSamplingTargets`, `GetSamplingStatisticSummaries`
     - Reading -- `GetSampling{Rules,Targets,StatisticSummaries}`, `Get{Group,Groups,ServiceGraph,TimeSeriesServiceStatistics}`, `GetTrace{Graph,Summaries}`, `BatchGetTraces`
 
 ### OpenTelemetry
