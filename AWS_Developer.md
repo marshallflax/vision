@@ -1424,6 +1424,40 @@
 
 ## Elastic Beanstalk (orchestration for environment creation, etc)
 
+- Alternative: CodeDeploy
+- Controlled by `appspec.yml`
+  - `files` -- list of source/destination pairs
+  - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
+    - List of tuples -- script `location`, `timeout`, `runas`
+- Targets:
+  - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
+    - Depends upon each EC2 instance having a tag identifying its environment
+    - Q: Why isn't codedeploy-agent installable as a yum package???
+    - EC2 instances must have authorization to access deployment bundles in S3
+  - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
+    - In-place deployment
+    - Blue/Green -- new ASG created
+      - ELB mandatory
+      - Choose how long to retail old ASG (and EC2 instances thereof)
+  - Lambda functions
+    - Traffic shift integrated within SAM (Serverless Application Model) framework
+    - Simply changes the percentages for the PROD (or whatever) alias.
+      - `LambdaLinear10PercentEvery3Minutes`
+      - `LambdaLinear10PercentEvery10Minutes`
+      - `LambdaCanary10Percent5Minutes` (and then 100%)
+      - `LambdaCanary10Percent30Minutes` (and then 100%)
+      - `AllAtOnce`
+  - ECS Platform
+    - Only Blue/Green deployments; switch occurs in ALB
+    - `ECSLinear10PercentEvery3Minutes`
+    - `ECSLinear10PercentEvery10Minutes`
+    - `ECSCanary10Percent5Minutes` (and then 100%)
+    - `ECSCanary10Percent30Minutes` (and then 100%)
+    - `AllAtOnce`
+  - On-prem
+- Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
+- Automated rollback
+  - Rollbacks are a _new_ deployment to a last known-good revision
 - Uses:
   - EC2 -- Scaled using ASG as usual
   - EIP (Elastic IP) -- Finally exposes <http://myap-$env.$suffix.$AZ.elasticbeanstalk.com>
@@ -1433,15 +1467,18 @@
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
 - Terms
-
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
-
     - Collection of AWS resources running one version at a time
     - Tiers
-      - Web server environment tier (servicing HTTP)
-      - Worker environment tier (pulls from SQS)
+      - Web server environment tier (servicing HTTP) -- ELB + EC2
+        - ELB in from of Security Groups and EC2 instances in multiple AZ
+      - Worker environment tier (pulls from SQS, for longer tasks) -- SQS + EC2
+        - EC2 instances pulling from an SQS queue
+        - Scale based on SQS message count
+        - Of course, Web Server Tier can publish to SQS queues
+        - Also supports `cron.yaml`
     - Instances -- Dev, Test, Prod, etc.
     - Modes -- Single-instance (for dev), HA with Load Balancer
       - Also, whether to use spot instances
@@ -1454,13 +1491,6 @@
 - Platforms
   - Go, Java SE, Java Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby
   - Docker (Single Container, Multi-Container, Pre-configured)
-- Tiers
-  - Web Server Environment Tier
-    - ELB in from of Security Groups and EC2 instances in multiple AZ
-  - Worker Environment Tier
-    - EC2 instances pulling from an SQS queue
-    - Scale based on SQS message count
-    - Of course, Web Server Tier can publish to SQS queues
 - IAM
   - EB itself uses an "aws-elasticbeanstalk-service-role", containing
     - Set the EC2 instance profile to be a new "aws-elasticbeanstalk-ec2-role" containing: `AWSElasticBeanstalkWebTier`, `AWSElasticBeanstalkWorkerTier`, `AWSElasticBeanstalkMulticontainerDocker`
@@ -1597,6 +1627,7 @@
 
 - Q: Not "Intrisic"
 - `Fn::Ref` -- resources (physical ID) and parameters
+  - `!Ref AWS::NoValue` is often useful
 - `Fn::GetAtt`, e.g. `!GetAtt MyEC2Instance.AvailabilityZone`
 - `Fn::FindInMap`, e.g. `!FindInMap [RegionAndArchToImage, !Ref "AWS::Region", 32]`
 - `Fn::ImportValue`, e.g. `!ImportValue ExportedName`
@@ -1751,8 +1782,25 @@
 - Drift
   - Caused by manual changes
   - Q: Can we periodically monitor all stacks for drift?
+  - StackSet
+    - StackSet drift detection may be aborted if it is taking too long
+    - Note: if a Stack instance is modified through CF directly, that isn't considered a drift
 - Stack policies
   - Can protect resources (e.g. RDS) from updates, etc.
+
+### AWS Service Catalog
+
+- Portfolio is a collection of products, each of which is defined by a CF Template
+  - Users may have IAM rights to different portfolios
+- Self-service portal ... governance, consistency, standardization
+  - Integration with ServiceNow, etc
+- Stack set constraints
+  - Accounts, Regions (and order thereof), Permissions
+- Launch constraints
+  - IAM Role allowing launch, update, and/or termination without rights to underlying resources
+    - Q: Is Full access to `ec2:*,sns:*` really needed???
+- `./mapping.yml` specifies which templates are for which products
+  - Then a Lambda function can (upon commit to prod branch) call `SyncServiceCatalogFunction`
 
 ## Integration and Messaging
 
@@ -3067,44 +3115,6 @@
 - Really, AWS???
   - ASG scale-out will be with v1, rather than v2. (But CodeDeploy will create a follow-on deployment to fix this.)
 
-#### AWS Elastic Beanstalk
-
-- AWS Elastic Beanstalk
-  - Alternative: CodeDeploy
-  - Controlled by `appspec.yml`
-    - `files` -- list of source/destination pairs
-    - `hooks` -- `BeforeInstall`, `ApplicationStop`, etc
-      - List of tuples -- script `location`, `timeout`, `runas`
-  - Targets:
-    - EC2 instances -- Requires CodeDeploy Agent (which is installed by Systems Manager and dependent upon Ruby)
-      - Depends upon each EC2 instance having a tag identifying its environment
-      - Q: Why isn't codedeploy-agent installable as a yum package???
-      - EC2 instances must have authorization to access deployment bundles in S3
-    - EC2 Autoscaling Groups -- Also requires CodeDeploy Agent
-      - In-place deployment
-      - Blue/Green -- new ASG created
-        - ELB mandatory
-        - Choose how long to retail old ASG (and EC2 instances thereof)
-    - Lambda functions
-      - Traffic shift integrated within SAM (Serverless Application Model) framework
-      - Simply changes the percentages for the PROD (or whatever) alias.
-        - `LambdaLinear10PercentEvery3Minutes`
-        - `LambdaLinear10PercentEvery10Minutes`
-        - `LambdaCanary10Percent5Minutes` (and then 100%)
-        - `LambdaCanary10Percent30Minutes` (and then 100%)
-        - `AllAtOnce`
-    - ECS Platform
-      - Only Blue/Green deployments; switch occurs in ALB
-      - `ECSLinear10PercentEvery3Minutes`
-      - `ECSLinear10PercentEvery10Minutes`
-      - `ECSCanary10Percent5Minutes` (and then 100%)
-      - `ECSCanary10Percent30Minutes` (and then 100%)
-      - `AllAtOnce`
-    - On-prem
-  - Gradual deployment -- `AllAtOnce`, `HalfAtATime`, `OneAtATime`, BlueGreen or custom
-  - Automated rollback
-    - Rollbacks are a _new_ deployment to a last known-good revision
-
 #### CodePipeline
 
 - CodePipeline -- Visual Workflow to Orchestrate the above via S3 artifacts
@@ -3810,7 +3820,7 @@
 
 ## AWS Config
 
-- Supported Resource Types
+- Records changes to many resource types:
   - `AWS::AppStream::{DirectoryConfig,Application,Stack}`
   - `AWS::AppFlow::Flow`
   - `AWS::AppIntegrations::EventIntegration`
@@ -3934,5 +3944,3 @@
   - `AWS::MediaConnect::{FlowEntitlement,FlowVpcInterface,FlowSource}`
     - `AWS::MediaPackage::{PackagingGroup,PackagingCOnfiguration}`
     - `AWS::MediaTailor::PlaybackConfiguration`
-
-  
