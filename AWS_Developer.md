@@ -1593,14 +1593,6 @@
   - CF shows "Change set preview"!
     - Q: Why the hell doesn't it show the order in which the changes will occur???
 
-### YAML
-
-- `:` -- key/value
-- `-` -- list item
-- `|` -- multiline string
-- `#` -- comments
-- `!` -- tags
-
 ### CloudFormation Intrinsic Functions
 
 - Q: Not "Intrisic"
@@ -1704,7 +1696,7 @@
       /opt/aws/bin/cfn-signal  --stack ${AWS::StackName} --region ${AWS::Region} --resource ${RESOURCE_NAME} -e $?
       ```
   - Output log in `/var/log/cloud-init-output.log`
-  - Alternative (python scripts)
+  - Alternative to UserData 
     - `cfn-init`
       - Retrieves metadata and initialization config from CloudFormation
       - Logs to `/var/log/cfn-init.log`
@@ -1748,10 +1740,12 @@
     - Fault-tolerance
   - Stacks can be subsequently removed from a StackSet (and run independently)
   - Permissions models
-    - Self-managed (manually-created adminstration and execution IAM roles)
+    - Self-managed (manually-created administration and execution IAM roles)
       - Administrator IAM given `sts:AssumeRole` to `arn:*:iam::*:role/MyAWSCloudFormationStackSetExecutionRole`
+        - `AssumeRolePolicyDocument` (assumable by "cloudformation.amazonaws.com")
       - Execution IAM may be assumed by `!Ref AdministratorAccountId` 
         - `ManagedPartyArns: !Sub arn:${AWS::Partition}:iam::aws:policy/MyAdministratorAccess`
+        - `AssumeRolePolicyDocument` (assumable by, e.g., `!Ref AdministratorAccountId`)
     - Service-managed (must fully-enable AWS Organizations)
       - StackSet administration (for existing and new accounts) may be delegated to trusted member account(s)
 - Drift
@@ -3805,3 +3799,140 @@
 - Elastic MapReduce (EMR)
   - Java, Hive, Pig, Cascading, Ruby, Perl, Python, R, PHP, C++, Node.js
 - AWS Amplify
+
+## YAML
+
+- `:` -- key/value
+- `-` -- list item
+- `|` -- multiline string
+- `#` -- comments
+- `!` -- tags
+
+## AWS Config
+
+- Supported Resource Types
+  - `AWS::AppStream::{DirectoryConfig,Application,Stack}`
+  - `AWS::AppFlow::Flow`
+  - `AWS::AppIntegrations::EventIntegration`
+  - `AWS::ApiGateway::{Stage,RestApi}`
+  - `AWS::ApiGatewayV2::{Stage,Api}`
+  - `AWS::Athena::{WorkGroup,DataCatalog,PreparedStatement}`
+  - `AWS::CloudFront::{Distribution,StreamingDistribution}`
+  - `AWS::CloudWatch::{Alarm,MetricStream}`
+    - `AWS::RUM::AppMonitor` (CloudWatch Real User Monitoring)
+    - `AWS::Evidently::{Project,Launch}` (A/B testing, etc.)
+  - `AWS::CodeGuruReviewer::RepositoryAssociation`
+  - `AWS::CodeGuruProfiler::ProfilingGroup`
+  - `AWS::Connect::PhoneNumber`
+    - `AWS::CustomerProfiles::{Domain,ObjectType}`
+  - `AWS::Detective::Graph`
+  - `AWS::DynamoDB::Table`
+  - `AWS::EC2::{Host,EIP,Instance}`
+    - `AWS::EC2::{CustomerGateway,InternetGateway,NetworkAcl,RouteTable,Subnet,VPC,VPNConnection,VPNGateway}`
+    - `AWS::NetworkManager::{TransitGatewayRegistration,Site,Device,Link,GlobalNetwork,CustomerGatewayAssociation,LinkAssociation}`
+  - `AWS::ECR::{Repository,RegistryPolicy,PullThroughCacheRule,PublicRepository}`
+  - `AWS::ECS::{Cluster,TaskDefinition,Service,TaskSet}`
+  - `AWS::EFS::{FileSystem,AccessPoint}`
+  - `AWS::EKS::{Cluster,FargateProfile,IdentifyProviderConfig,Addon}`
+  - `AWS::EMR::SecurityConfiguration` (Elastic MapReduce)
+  - `AWS::Events::{EventBus,ApiDestination,Archive,Endpoint,Connection,Rule}`
+    - `AWS::EventSchemas::{RegistryPolicy,Discoverer,Schema}`
+  - `AWS::Forecast::{Dataset,DatasetGroup}`
+  - `AWS::FraudDetector::{Label,EntityType,Variable,Outcome}`
+  - `AWS::GuardDuty::{Detector,ThreatIntelSet,IPSet,Filter}`
+  - `AWS::InspectorV2::Filter}`
+  - `AWS::IVS::{Channel,RecordingConfiguration,PlaybackKeyPair}` (Interactive Video)
+  - `AWS::Cassandra::Keyspace`
+  - `AWS::Elasticsearch::Domain` (deprecated)
+    - `AWS::OpenSearch::Domain`
+  - `AWS::Personalize::{Dataset,Schema,Solution,DatasetGroup}`
+  - `AWS::Pinpoint::{ApplicationSettings,Segment,App,Campaign,InAppTemplate,EmailChannel,EmailTemplate,EventStream}`
+  - `AWS::QLDB::Ledger` (Quantum Ledger Database)
+  - `AWS::Kendra::Index` (enterprise search)
+  - `AWS::Kinesis::{Stream,StreamConsumer}`
+    - `AWS::KinesisAnalyticsV2::Application`
+    - `AWS::KinesisFirehose::DeliveryStream`
+    - `AWS::KinesisVideo::{SignalingChannel,Stream}`
+  - `AWS::Lex::{BotAlias,Bot}`
+  - `AWS::Lightsail::{Disk,Certificate,Bucket,StaticIp}` (VPS bundling compute, storage, network, DNS)
+  - `AWS::LookoutMetrics::Alert`
+  - `AWS::LookoutVision::Project`
+  - `AWS::APS::RuleGroupsNamespace` (Managed Prometheus)
+  - `AWS::AmazonMQ::Broker`
+  - `AWS::MSK::{Cluster,Configuration,BatchScramSecret}` (Managed Streaming Kafka)
+  - `AWS::Redshift::Cluster`
+  - `AWS::RDS::{DBInstance,DBSecurityGroup,DBSnapshot}`
+  - `AWS::Route53:{HostedZone,HealthCheck}`
+    - `AWS::Route53Resolver::Resolver{Endpoint,Rule,RuleAssociation}`
+    - `AWS::Route53Resolver::Firewall{DomainList,RuleGroupAssociation}`
+    - `AWS::Route53Resolver::ResolverQueryLogging{Config,ConfigAssociation}`
+    - `AWS::Route53RecoveryReadiness::{Cell,ReadinessCheck,RecoveryGroup,ResourceSet}`
+    - `AWS::Route53RecoveryControl::{Cluster,ControlPanel,RoutingControl,SafetyRule}`
+  - `AWS::SageMaker::{CodeRepository,Domain,AppImageConfig,Image,Model,NotebookInstance,NotebookInstanceLifecycleConfig,EndpointConfig,Workteam,FeatureGroup}`
+  - `AWS::SES::{ConfigurationSet,ContactList,Template,ReceiptFilter,ReceiptRuleSet}`
+  - `AWS::SNS::Topic`
+  - `AWS::S3::{Bucket,AccountPublicAccessBlock,MultiRegionAccessPoint,StorageLens,AccessPoint}`
+  - `AWS::Workspaces::{ConnectionAlias,Workspace}`
+  - `AWS::Amplify::{App,Branch}`
+  - `AWS::AppConfig::{Application,Environment,ConfigurationProfile,DeploymentStrategy,HostedConfigurationVersion}`
+  - `AWS::AppRunner::{VpcConnector,Service}`
+  - `AWS::AppMesh::{VirtualNode,VirtualService,VirtualGateway,VirtualRouter,Rout}`
+  - `AWS::AppSync::GraphQLApi`
+  - `AWS::AuditManager::Assessment`
+  - `AWS::AutoScaling::{AutoScalingGroup,LaunchConfiguration,ScalingPolicy}`
+  - `AWS::Backup::{BackupPlan,BackupSelection,BackupVault,RecoverPoint,ReportPlan}`
+  - `AWS::Batch::{JobQueue,ComputeEnvironment,SchedulingPolicy}`
+  - `AWS::Budgets::BudgetsAction`
+  - `AWS::ACM::Certificate`
+  - `AWS::CloudFormation::Stack`
+    - `AWS::ACMPCA::CertificateAuthority`
+    - `AWS::Logs::Destination`
+  - `AWS::CloudTrail::Trail`
+  - `AWS::Cloud9::EnvironmentEC2`
+  - `AWS::ServiceDiscovery::{Service,PublicDnsNamespace,HttpNamespace,Instance}`
+  - `AWS::CodeArtifact::Repository`
+  - `AWS::CodeBuild::{Project,ReportGroup}`
+  - `AWS::CodeDeploy::{Application,DeploymentConfig,DeploymentGroup}`
+  - `AWS::CodePipeline::Pipeline`
+  - `AWS::Config::{ResourceCompliance,ConformancePackCompliance,ConfigurationRecorder}`
+  - `AWS::DMS::{EventSubscription,ReplicationSubnetGroup,ReplicationInstance,ReplicationTask,Certificate,Endpoint}` (DB Migration Service)
+  - `AWS::DataSync::{Task,Location{SMB,FSx{Lustre,Windows},S3,EFS,NFS,HDFS,ObjectStorage}}`
+  - `AWS::DeviceFarm::{TestGridProject,InstanceProfile,Project}`
+  - `AWS::ElasticBeanstalk::{Application,ApplicationVersion}`
+  - `AWS::FIS::ExperimentTemplate` (Fault Injection Simulator)
+  - `AWS::GlobalAccelerator::{Listener,EndpointGroup,Accelerator}`
+  - `AWS::Glue::{Job,Classifier,MLTransform}`
+  - `AWS::GroundStation::{Config,MissionProfile}`
+  - `AWS::HealthLake::FHIRDatastore`
+  - `AWS::IAM::{User,SAMLProvider,ServerCertificate,Group,Role,Policy}`
+    - `AWS::AccessAnalyzer::Analyzer`
+  - `AWS::IoT::{Authorizer,SecurityProfile,RoleAlias,Dimension,Policy,MitigationAction,ScheduledAudit,AccountAuditConfiguration,CustomMetric,JobTemplate,ProvisioningTemplate,FleetMetric}`
+    - `AWS::IotSiteWise::Gateway`
+    - `AWS::IotWireless::{ServiceProfile,MulticastGroup,FuotaTask}`
+    - `AWS::IotAnalytics::{Datastore,Dataset,Pipeline,Channel}`
+    - etc
+  - `AWS::KMS::Key`
+  - `AWS::Lambda::{Function,Alias}`
+  - `AWS::NetworkFirewall::{Firewall,FirewallPolicy,RuleGroup,TLSInspectionConfiguration}`
+  - `AWS::Panorama::Package` ("Computer Vision at the Edge")
+  - `AWS::ResilienceHub::{ResiliencePolicy,App}`
+  - `AWS::RoboMaker::RobotApplicationVersion,RobotApplication,SimulationApplication}`
+  - `AWS::Signer::SignerProfile`
+  - `AWS::SecretsManager::Secret`
+  - `AWS::ServiceCatalog::{CloudFormationProject,CloudFormationProvisionedProduct,Portfolio}`
+  - `AWS::Shield::Protection`
+    - `AWS::ShieldRegional::Protection`
+  - `AWS::StepFunctions::{Activity,StateMachine}`
+  - `AWS::SSM::{ManagedInstanceInventory,PatchCompliance,AssociationCompliance,FileData}`
+  - `AWS::Transfer::{Agreement,Connector,Workflow,Certificate}`
+  - `AWS::WAF::{RateBasedRule,Rule,WebACL,RuleGroup}`
+    - `AWS::WAFRegional::{RateBasedRule,Rule,WebACL,RuleGroup}`
+    - `AWS::WAFv2::{WebACL,RuleGroup,ManagedRuleSet,IPSet,RegexPatternSet}`
+  - `AWS::XRay::EncryptionConfig`
+  - `AWS::ElasticLoadBalancingV2::{LoadBalancer,Listener}`
+    - `AWS::ElasticLoadBalancing::LoadBalancer`
+  - `AWS::MediaConnect::{FlowEntitlement,FlowVpcInterface,FlowSource}`
+    - `AWS::MediaPackage::{PackagingGroup,PackagingCOnfiguration}`
+    - `AWS::MediaTailor::PlaybackConfiguration`
+
+  
