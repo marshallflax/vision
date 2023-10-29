@@ -15,9 +15,11 @@
 - SAP -- Certified Solutions Architect Professional
 - DOP -- Certified DevOps Engineer Professional (DOP-C02)
 
-### Domain 1 -- Development (DOP-C02)
+### DOP -- Certified DevOps Engineer Professional (DOP-C02)
 
-#### Task 1 -- Application code
+#### Domain 1 -- Development (DOP-C02)
+
+##### Task 1 -- Application code
 
 - Patterns
   - Microservices vs monolithic, Fan-out, Idempotency, stateful, stateless, loose coupling
@@ -28,13 +30,13 @@
 - Serverless Application Model (AWS SAM) unit testing
 - Messaging, APIs, SDKs
 
-#### Task 2 -- Lambda code
+##### Task 2 -- Lambda code
 
 - Testing, Event source mapping, event-driven architectures, scalability, stateless apps, unit testing, VPC private resources
 - Lambda function configuration via parameters/environment variables -- memory, concurrency, timeout, runtime, handler, layers (for deployment), extensions, triggers, destinations, tuning.
 - Integration with services, destinations, DLQ
 
-#### Task 3 -- Data stores
+##### Task 3 -- Data stores
 
 - SQL and NoSQL, CRUD, ephemeral vs persistent
 - Keys -- partition, DynamoDB
@@ -46,22 +48,22 @@
 - Serialization/deserialization
 - Data life-cycles
 
-### Domain 2 -- Security
+#### Domain 2 -- Security
 
-#### Task 1 -- Authentication and Authorization
+##### Task 1 -- Authentication and Authorization
 
 - Federated -- Security Assertion Markup (SAML, using XML), OpenID Connect (OIDC, using JWT), Amazon Cognito
 - Tokens -- JSON Web Token (JWT), OAuth, AWS Security Token Service (STS)
 - Cognito -- user pools and identity pools
 - Policies -- resource, service, principal, Role-based access control (RBAC), ACL, least privilege, customer vs AWS managed
 
-#### Task 2 -- Encryption at rest and in transit
+##### Task 2 -- Encryption at rest and in transit
 
 - Certificates -- AWS Private Cert Authority
 - Key Management -- rotation, AWS-managed, customer-management
 - SSH keys
 
-#### Task 3 -- Sensitive data
+##### Task 3 -- Sensitive data
 
 - Classification -- PII, PHI
 - Env variables
@@ -69,9 +71,9 @@
 - Credential handling
 - Sanitization
 
-### Domain 3 -- Deployment
+#### Domain 3 -- Deployment
 
-#### Task 1 -- Artifacts
+##### Task 1 -- Artifacts
 
 - Configuration data -- AWS AppConfig, Secrets Manager, Parameter Store
   - Dependencies -- container images, config files, env variables
@@ -80,14 +82,14 @@
 - Git -- AWS CodeCommit
 - Container Images
 
-#### Task 2 -- Dev environments
+##### Task 2 -- Dev environments
 
 - Application deployment
 - Mock endpoints
 - Lambda aliases, development endpoints
 - Deploying to existing environments
 
-#### Task 3 -- Automated deployment testing
+##### Task 3 -- Automated deployment testing
 
 - API Gateway states
 - CI/CD branches and actions
@@ -97,7 +99,7 @@
 - Infrastructure as Code (IaC) -- SAM templates, CloudFormation templates
 - API Gateway environments
 
-#### Task 4 -- Code deployment
+##### Task 4 -- Code deployment
 
 - Git, AWS CodeCommit, labels and branches
 - AWS CodePipeline workflow and approvals
@@ -106,30 +108,30 @@
 - API Gateway -- stages, custom domains
 - Strategies -- canary, blue/green, rolling, rollbacks, dynamic deployments
 
-### Domain 4 -- Troubleshooting and Optimization
+#### Domain 4 -- Troubleshooting and Optimization
 
-#### Task 1 -- Root Cause
+##### Task 1 -- Root Cause
 
 - Logging and monitoring -- CloudWatch Logs Insights, CloudWatch Embedded Metric Format (EMF)
 - Visualizations, AWS X-Ray
 - Code analysis tools
 - HTTP codes, Common SDK exceptions
 
-#### Task 2 -- Instrumentation
+##### Task 2 -- Instrumentation
 
 - Structured logging, distributed tracing (and annotations)
 - Logging, monitoring, observability
 - Application metrics -- custom, embedded, builtin
 - Notification alerts (e.g. quota, or deployment completion)
 
-#### Task 3 -- Optimization
+##### Task 3 -- Optimization
 
 - Caching (using request headers), concurrency, messaging (Simple Queue Service, Simple Notification Service, filtering)
 - Profiling -- determining memory and compute requirements
 
-### Scope
+#### Scope
 
-#### Features in scope
+##### Features in scope
 
 - Analytics -- Athena, Kinesis, OpenSearch
 - App Integration -- AppSync, EventBridge, Simple Notification Service (SNS), Simple Queue Service (SQS), Step Functions
@@ -142,7 +144,7 @@
 - Security/Identity/Compliance -- Certificate manager (ACM), Cognito, IAM, Key Management Service (KMS), Private Cert Authority, Secrets Manager, Security Token Service (STS), Web Application Firewall (WAF ... before ALB, CloudFront, or API Gateway)
 - Storage -- Elastic Block Store (EBS), Elastic File System (EFS), S3, S3 Glacier
 
-#### Features out of scope
+##### Features out of scope
 
 - Analytics -- QuickSight
 - Business -- Chime, Connect, WorkMail
@@ -222,6 +224,10 @@
   - `"principal": {"Federated": "cognito-identity.amazonaws.com"}`
   - `"principal": {"Federated": "arn:aws:iam::$ACCT:saml-provider/$PROVIDER"}`
   - `"principal": {"Service": ["ecs.amazonaws.com", "elasticloadbalancing.amazonaws.com"]}`
+
+#### AWS Organizations
+
+- TODO
 
 ### API/SDK
 
@@ -1524,7 +1530,7 @@
 
 - Automated destruction and recreation of infrastructure
 - Automated diagrams
-- CloudFormation does ordering and orchestration
+- CloudFormation does ordering and orchestration -- but does require manual stack updating
 - Separation of concerns
   - VPC stacks
   - Network stacks
@@ -1606,6 +1612,11 @@
 - `Fn::Sub`, e.g. `!Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${vpc}'`
   - (Also can supply specific mapping for local interpolations)
 - Condition functions: `Fn::And`, `Fn::Equals`, `Fn::If` (ternary), `Fn::Not`, `Fn::Or`
+- Also
+  - `Fn::Base64`
+  - `Fn::Split`
+  - `Fn::Select`
+  - `Fn::GetAZs`
 
 ### CloudFormation Rollbacks
 
@@ -1647,8 +1658,26 @@
 
 ### CloudFormation -- SSM Parameter Type
 
-- "SSM" is Systems Manager Parameter Store 👎
+- "SSM" is Systems Manager Parameter Store❓
+- Q: Why don't template parameters which are SSM references identify themselves as such in the CF console?
 - CloudFormation always fetches current value for the key
+  - Just set the Parameter type to 
+    - `AWS::SSM::Parameter::Name`
+    - `AWS::SSM::Parameter::Value<String>` (but _not_ `SecureString`, though see Dynamic References below)
+    - `AWS::SSM::Parameter::Value<List<String>>`
+    - `AWS::SSM::Parameter::Value<CommaDelimitedList>`
+    - `AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>` -- `/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2`
+  - SSM Parameter keys are validated, but not the values returned from SSM
+- Typical keys (TODO)
+
+### CloudFormation -- Dynamic References
+
+- Stack and changeset operations can extract data from SSM Parameter Store and AWS Secrets Manager
+  - `ssm` -- SSM Parameter Store plaintext (but not public SSM parameters) -- `{{resolve:ssm:$PARAMETERNAME:$VERSION}}` or `{{resolve:ssm:$PARAMETERNAME}}`
+  - `ssm-secure` -- SSM Parameter Store "Secure String" -- `{{resolve:ssm-secure:$PARAMETERNAME:$VERSION}}` or `{{resolve:ssm-secure:$PARAMETERNAME}}`
+    - Only supported for some resources <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-ssm-secure-strings>
+  - `secretsmanager`-- AWS Secrets Manager
+- Up to 60 dynamic refs per template, `{{resolve:$SERVICENAME:$REFERENCEKEY}}`
 
 ### CloudFormation events to SNS Topic
 
@@ -1713,6 +1742,18 @@
   - E.g. passing export values to many stacks (e.g. VPC Id)
 - StackSets
   - Deploy across multiple accounts and/or regions
+    - Order of regions may be specified
+    - Max number of concurrent accounts per region
+    - Update regions sequentially (default) or in parallel
+    - Fault-tolerance
+  - Stacks can be subsequently removed from a StackSet (and run independently)
+  - Permissions models
+    - Self-managed (manually-created adminstration and execution IAM roles)
+      - Administrator IAM given `sts:AssumeRole` to `arn:*:iam::*:role/MyAWSCloudFormationStackSetExecutionRole`
+      - Execution IAM may be assumed by `!Ref AdministratorAccountId` 
+        - `ManagedPartyArns: !Sub arn:${AWS::Partition}:iam::aws:policy/MyAdministratorAccess`
+    - Service-managed (must fully-enable AWS Organizations)
+      - StackSet administration (for existing and new accounts) may be delegated to trusted member account(s)
 - Drift
   - Caused by manual changes
   - Q: Can we periodically monitor all stacks for drift?
