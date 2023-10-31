@@ -1466,6 +1466,11 @@
 - Manages: provisioning, load-balancing, scaling, health monitoring, instance configuration, etc
   - (CloudFormation effects stacks which orchestrate creation of resources using templates)
 - Free, but you of course pay for everything you use
+- Notification events
+  - Environment Operations Status -- create/update/terminate start/success/fail
+  - Resource Status -- ASG/ELB/EC2 create/delete
+  - Managed Updates Status -- started/failed
+  - Environment Health Status
 - Terms
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
@@ -1511,8 +1516,7 @@
 - Configuration update strategies
   - Beyond scope of test
 - Files
-  - `cron.yaml`
-    - Can hit an endpoint periodically, for example
+  - `cron.yaml` (e.g., can hit an endpoint periodically)
   - `.ebextensions/`
     - `logging.config` (yaml)
 
@@ -1801,6 +1805,90 @@
     - Q: Is Full access to `ec2:*,sns:*` really needed???
 - `./mapping.yml` specifies which templates are for which products
   - Then a Lambda function can (upon commit to prod branch) call `SyncServiceCatalogFunction`
+
+## AWS Systems Manager (Simple Systems Manager -- SSM)
+
+- Free service
+- EC2 and on-prem instances ("nodes") -- at scale
+  - Windows and Linux
+    - Requires SSM Agent (included in Amazon Linux 2 AMI and some Ubuntu AMI)
+      - Agent initiates traffic to SSM
+    - Q: Difference between `AmazonEC2RoleForSSM` (soon to be deprecated) and `AmazonSSMManagedInstanceCore`
+  - CloudWatch metrics and dashboards
+  - AWS Config
+- Operational insights
+- Patching automation
+- Features
+  - **Resource Groups**
+    - Most AWS Resources (especially `AWS::EC2::Instance`, S3, DynamoDB, Lambda, etc) have textual key/value pairs (i.e., "Tags")
+      - Allows logical grouping (i.e., "Resource Groups")
+        - Per-application
+        - Per-stack-layer
+        - Per-region
+        - Dev-vs-prod
+        - etc
+      - The "Name" tag appears in Fleet Manager, etc
+  - Operations Management
+    - Explorer
+    - OpsCenter
+    - CloudWatch Dashboard
+    - PHD
+    - Incident Manager
+  - Shared Resources
+    - **Documents** (center of SSM)
+      - JSON or YAML, of course, with parameters and actions
+        - Apply to Windows or Linux platforms
+        - Owned by Amazon, Owned by me, or Shared with me
+          - `AWS-ApplyPatchBaseline`
+        - May be for "Command or Session" or "Automation"
+        - Target type might be `/AWS::EC2::Instance`
+        - "Details" pane describes parameters
+      - Can run commands, and interact with State Manager, Patch Manager, and Automation
+      - Can extract values from SSM Parameter Store
+      - SSM -- Run Command 
+        - Across all the instances in a Resource Group
+        - Rate Control (number or percentage) and Error Control (number or percentage)
+        - Integrated with IAM and CloudTrail
+        - SSH of course not required
+        - Output to console, S3 bucket, and/or CloudWatch Logs
+        - Notifications to SNS
+        - May be invokes via EventBridge
+      - SSM -- Automation
+        - Actions against EC2 instances and/or other AWS resources -- restart instances, create AMI, snapshot EBS, etc
+        - Triggered from AWS Console, CLI, SDK, EventBridge
+        - Scheduled using Maintenance Windows
+        - Invoked by AWS Config for remediation
+        - Q: Can multiple commands or automations run against the same EC2 instance simultaneously (which of course would be bad)
+      - SSM Parameter Store
+        - `/my-department/my-app/dev/db-{url,password}` (available within Lambda via `GetParameters` or `GetParametersByPath`)
+          - Also: `/aws/reference/secretsmanager/${SECRET_ID}`
+          - Also: `/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2` (only public parameter)
+        - | Dimension | Standard | Advanced |
+          | --------- | -------- | -------- |
+          | Params/region | 10000 | 100000 |
+          | Max size | 4KiB | 8KiB |
+          | Policies | No | Yes |
+          | Cost | No | Yes |
+          |Storage | Free | 0.05 USD/parameter/month |
+  - Change Management
+    - Change Manager
+    - **Automation**
+    - Change Calendar
+    - **Maintenance Windows**
+  - Application Management
+    - Application Manager
+    - AppConfig
+    - **Parameter Store**
+  - Node Management
+    - Fleet Manager
+    - Compliance
+    - **Inventory**
+    - Hybrid Activations
+    - **Session Manager**
+    - **Run Command**
+    - **State Manager**
+    - **Patch Manager**
+    - Distributer
 
 ## Integration and Messaging
 
