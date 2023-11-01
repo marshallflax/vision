@@ -146,7 +146,7 @@
 
 ##### Features out of scope
 
-- Analytics -- QuickSight
+- Analytics -- QuickSight (Business Intelligence Service)
 - Business -- Chime, Connect, WorkMail
 - Comm -- Pinpoint (SMS gateway)
 - EndUser -- AppStream 2.0, Workspace
@@ -1359,6 +1359,19 @@
 - SQS Queue
   - Tasks can poll an SQS Queue and ECS Service Auto Scaling can do its thing.
 
+### ECS Logging
+
+- `awslogs` driver (enabled with `logConfiguration` Task Definition parameter) allows containers to directly send app logs to CloudWatch Logs
+- Fargate
+  - Supports `awslogs`, `splunk`, `awsfirelens`
+  - Task Execution Role must have required perms
+- EC2
+  - Uses CloudWatch Unified Agent and ECS Container Agent
+  - Set `ECS_AVAILABLE_LOGGING_DRIVERS` in `/etc/ecs/ecs/config` to one of `awslogs`, `fluentd`, `gelf`, `json`-`file`, `journald`, `logentries`,`syslog`, `splunk`, or `awsfirelens`.
+  - (Container must have permissions)
+- Via Sidecar
+  - Useful if the containers within the task write to many files
+
 ### ECS Tasks Placement
 
 - Fargate doesn't need any of this nonsense.
@@ -1472,9 +1485,11 @@
   - Managed Updates Status -- started/failed
   - Environment Health Status
 - Terms
+
   - "Application" -- EB components (environments, versions, configs, etc)
   - "Application Version"
   - "Environment"
+
     - Collection of AWS resources running one version at a time
     - Tiers
       - Web server environment tier (servicing HTTP) -- ELB + EC2
@@ -1681,14 +1696,14 @@
   - By default using a temp session generated from operator's credentials
   - Alternative (least privilege) : grant operator right to give `iam:PassRole` to CF to a Service role with the necessary AWS perms
     - "MyUseCloudFormation": `cloudformation:*`, `s3:*`, `iam:PassRole`, `ssm:GetParameters`, `ec2:DescribeImages`
-    - Better: Add policies like `AmazonEC2FullAccess`, `AmazonSSMReadOnlyAccess`, etc 
+    - Better: Add policies like `AmazonEC2FullAccess`, `AmazonSSMReadOnlyAccess`, etc
 
 ### CloudFormation -- SSM Parameter Type
 
 - "SSM" is Systems Manager Parameter Store❓
 - Q: Why don't template parameters which are SSM references identify themselves as such in the CF console?
 - CloudFormation always fetches current value for the key
-  - Just set the Parameter type to 
+  - Just set the Parameter type to
     - `AWS::SSM::Parameter::Name`
     - `AWS::SSM::Parameter::Value<String>` (but _not_ `SecureString`, though see Dynamic References below)
     - `AWS::SSM::Parameter::Value<List<String>>`
@@ -1731,7 +1746,7 @@
       /opt/aws/bin/cfn-signal  --stack ${AWS::StackName} --region ${AWS::Region} --resource ${RESOURCE_NAME} -e $?
       ```
   - Output log in `/var/log/cloud-init-output.log`
-  - Alternative to UserData 
+  - Alternative to UserData
     - `cfn-init`
       - Retrieves metadata and initialization config from CloudFormation
       - Logs to `/var/log/cfn-init.log`
@@ -1778,7 +1793,7 @@
     - Self-managed (manually-created administration and execution IAM roles)
       - Administrator IAM given `sts:AssumeRole` to `arn:*:iam::*:role/MyAWSCloudFormationStackSetExecutionRole`
         - `AssumeRolePolicyDocument` (assumable by "cloudformation.amazonaws.com")
-      - Execution IAM may be assumed by `!Ref AdministratorAccountId` 
+      - Execution IAM may be assumed by `!Ref AdministratorAccountId`
         - `ManagedPartyArns: !Sub arn:${AWS::Partition}:iam::aws:policy/MyAdministratorAccess`
         - `AssumeRolePolicyDocument` (assumable by, e.g., `!Ref AdministratorAccountId`)
     - Service-managed (must fully-enable AWS Organizations)
@@ -1810,12 +1825,26 @@
 
 - Free service
 - EC2 and on-prem instances ("nodes") -- at scale
+  - EC2 instances have `i-` prefix
+    - `mi-` prefix for on-prem, IoT devices, edge devices, and VMs from other cloud providers
+      - Ask SSM for a "Hybrid Activation" and receive 1-1000 Activation IDs and Codes, and then install SSM agent and register with SSM using ID+Code
+      - API GW + Lambda can expose SSM Hybrid Activation to on-prem servers
+      - IoT Greengrass Instances
+        - SSM Agent is available as a Greengrass Component for Greengrass Code devices
+        - Token Exchange Role must have permissions to talk to SSM
   - Windows and Linux
     - Requires SSM Agent (included in Amazon Linux 2 AMI and some Ubuntu AMI)
-      - Agent initiates traffic to SSM
+      - Agent initiates traffic to SSM, e.g. `ssm.${REGION}.amazonaws.com`, as well as `ec2messages.*`, `ssmmessages.*`
+      - VPC Endpoints for private subnets (must accept 443 traffic)
+        - SSM Service, perhaps KMS encryption, perhaps CloudWatch Logs, perhaps S3 (or use S3 Gateway Endpoint and update routing tables)
     - Q: Difference between `AmazonEC2RoleForSSM` (soon to be deprecated) and `AmazonSSMManagedInstanceCore`
   - CloudWatch metrics and dashboards
   - AWS Config
+  - Default Host Management Configuration (DHMC) allows EC2 instances to automatically be SSM-managed without an EC2 Instance Profile (just a global switch for your account in the region)
+    - Just use an Instance Identify Role
+      - By default `AWSSystemsManagerDefaultEC2InstanceManagementRole` will be created and assigned to all EC2 instances -- <https://aws.amazon.com/blogs/mt/enable-management-of-your-amazon-ec2-instances-in-aws-systems-manager-using-default-host-management-configuration/>
+    - IMDS (v2-only)  and SSM Agent required
+    - Enables Session Manager, Patch Manager, Inventory
 - Operational insights
 - Patching automation
 - Features
@@ -1830,7 +1859,43 @@
       - The "Name" tag appears in Fleet Manager, etc
   - Operations Management
     - Explorer
-    - OpsCenter
+    - OpsWorks -- relies upon Chef
+      - **OpsWorks Stacks** (deprecated, and EOL 2024-05)
+        - Layer lifecycle events 
+          - Setup -- After booting (good time for `yum install`)
+            - Implies "Deploy" event as well
+          - Configure -- Fires on all instances in a layer whenever **any** instance in the layer (useful for HAProxy reconfiguration)
+            - Instance enters/leaves online state
+            - Elastic IP address associated/disassociated
+            - ELB attached/detached
+          - Deploy
+          - Undeploy
+            - Removing app from instances
+          - Shutdown
+        - Deploy apps using Chef cookbooks
+          - Cookbooks (`.tar.gz`) may be hosted in Git, HTTP, or S3
+          - Typically three layers: ALB, Apps, DB
+        - Stacks can have root device type of EBS or Instance Store
+        - Auto-healing enabled by default (5 minute timeout, then tries turning-it-off-and-on-again)
+        - Optional `AWSOpsWorksCloudWatchLogs` policy
+        - Instance types: 24/7, time-based, load-based
+          - Per-instance rules -- different from AutoScalingGroups
+          - Q: How about updating instances which currently aren't up (especially time-based/load-based)?
+      - OpsWork for Chef Automate
+      - OpsWorks for Puppet Enterprise
+      - CloudWatch Events (perhaps to SNS)
+        - OpsWorks Instance/Command/Deployment State Change
+        - OpsWorks Alert
+        - API Calls (via CloudTrail)
+    - **OpsCenter**
+      - Single dashboard for issues across different AWS services
+        - Security, e.g. Security Hub
+        - Performance, e.g. DynamoDB throttling
+        - Failures, e.g. ASG failed launch instance
+      - "OpsItems"
+        - Issues and interruptions requiring investigation and remediation
+        - Events, resources, AWS Config changes, CloudTrail, EventBridge
+        - Runbooks (AWS and on-prem)
     - CloudWatch Dashboard
     - PHD
     - Incident Manager
@@ -1845,49 +1910,78 @@
         - "Details" pane describes parameters
       - Can run commands, and interact with State Manager, Patch Manager, and Automation
       - Can extract values from SSM Parameter Store
-      - SSM -- Run Command 
-        - Across all the instances in a Resource Group
-        - Rate Control (number or percentage) and Error Control (number or percentage)
-        - Integrated with IAM and CloudTrail
-        - SSH of course not required
-        - Output to console, S3 bucket, and/or CloudWatch Logs
-        - Notifications to SNS
-        - May be invokes via EventBridge
-      - SSM -- Automation
-        - Actions against EC2 instances and/or other AWS resources -- restart instances, create AMI, snapshot EBS, etc
-        - Triggered from AWS Console, CLI, SDK, EventBridge
-        - Scheduled using Maintenance Windows
-        - Invoked by AWS Config for remediation
-        - Q: Can multiple commands or automations run against the same EC2 instance simultaneously (which of course would be bad)
-      - SSM Parameter Store
-        - `/my-department/my-app/dev/db-{url,password}` (available within Lambda via `GetParameters` or `GetParametersByPath`)
-          - Also: `/aws/reference/secretsmanager/${SECRET_ID}`
-          - Also: `/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2` (only public parameter)
-        - | Dimension | Standard | Advanced |
-          | --------- | -------- | -------- |
-          | Params/region | 10000 | 100000 |
-          | Max size | 4KiB | 8KiB |
-          | Policies | No | Yes |
-          | Cost | No | Yes |
-          |Storage | Free | 0.05 USD/parameter/month |
   - Change Management
     - Change Manager
     - **Automation**
+      - Actions against EC2 instances and/or other AWS resources -- restart instances, create AMI, snapshot EBS, etc
+      - Triggered from AWS Console, CLI, SDK, EventBridge
+      - Scheduled using Maintenance Windows
+      - Invoked by AWS Config for remediation
+      - Useful for
+        - Reduce cost: starting EC2 and RDS instances at start of working hours and terminating at end
+          - Or `AWS-ResizeInstance`
+        - Building golden AMI
+        - Even systematically enable S3 versioning
+      - Q: Can multiple commands or automations run against the same EC2 instance simultaneously (which of course would be bad)
     - Change Calendar
     - **Maintenance Windows**
+      - Cron scheduling available
+      - Can register tasks: Run Command, Automation, Lambda, Step Function
+        - Concurrency, Error Threshold, IAM service role (default `AWSServiceRoleForAmazonSSM`), Reboot option, Timeout, etc
   - Application Management
     - Application Manager
     - AppConfig
     - **Parameter Store**
+      - Store `String`, `StringList`, `SecureString` (KMS)
+      - `/my-department/my-app/dev/db-{url,password}` -- available within Lambda via `GetParameters` or `GetParametersByPath` (for subtree with `--recursive`), or CLI `aws ssm get-parameters --names ${PARAM1} ${PARAM2})` (requires `--with-decryption` for `SecureString` to give something usable)
+        - Also: `/aws/reference/secretsmanager/${SECRET_ID}`
+        - Also: `/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2` (only public parameters)
+      - | Tier                       | Standard | Advanced                 |
+        | -------------------------- | -------- | ------------------------ |
+        | Params/region              | 10000    | 100000                   |
+        | Max size                   | 4KiB     | 8KiB                     |
+        | Policies (e.g. expiration) | No       | Yes                      |
+        | Cost                       | No       | Yes                      |
+        | Storage                    | Free     | 0.05 USD/parameter/month |
   - Node Management
     - Fleet Manager
-    - Compliance
+    - **Compliance**
+      - Patch compliance
+      - Configuration inconsistencies
+      - Resource Data Sync (even from multiple accounts/regions) to S3, then analyze using Athena or QuickSight
     - **Inventory**
     - Hybrid Activations
     - **Session Manager**
+      - Secure shell to EC2 and on-prem from AWS Console, CLI, or Session Manager SDK
+      - No SSH keys, bastion hosts, etc (scary!, and different from EC2 Instance Connect)
+        - Interestingly, `${USER}` isn't `ec2-user`, but it in in wheel. (Note: username can actually be specified.)
+        - Interestingly, `.profile` (i.e., environment vars, etc) may be specified as well.
+          - Q: Does "Linux shell profile" also include MacOS?
+      - Linux, MacOS, Windows
+      - All connections and commands are logged to S3 and/or CloudWatch Logs
+      - `StartSession` events may be intercepted (Q: not just observed?) by CloudTrail 
+      - IAM permissions (especially based on instance tags) can control who can access which instances
+        - Users may be restricted to specific commands
     - **Run Command**
+      - Across all the instances in a Resource Group
+      - Rate Control (number or percentage) and Error Control (number or percentage)
+      - Integrated with IAM and CloudTrail
+      - SSH of course not required
+      - Output to console, S3 bucket, and/or CloudWatch Logs
+      - Notifications to SNS
+      - May be invokes via EventBridge
     - **State Manager**
     - **Patch Manager**
+      - EC2 and on-prem instances
+      - OS updates, app updates, security updates, etc
+      - Generates patch compliance report to S3
+      - On-demand or schedule using Maintenance Windows
+      - Patch Baseline -- which patches should be installed
+        - Pre-defined baselines -- `AWS-RunPatchBaseline` -- critical and security
+        - Custom Patch Baselines, or auto-approved
+      - Patch Group
+        - Associates instances with different Patch Baselines (many-to-one)
+        - The `Default` patch group is, um, the default
     - Distributer
 
 ## Integration and Messaging
@@ -2501,7 +2595,8 @@
 
 ### Lambda EFS
 
-- Requires EFS Access Points
+- Requires EFS Access Points and VPC peering
+  - IAM -- `elasticfilesystem:{DescribeFileSystems,DescribeMountTargets,CreateAccessPoint}`, `ec2:{DescribeSubnets,DescribeNetworkInterfaces}`
 - Beware EFS connection limits during bursts of activity
 
 ### Lambda Concurrency
@@ -2533,9 +2628,10 @@
 
 - Published versions are immutable
 - Aliases (e.g. "dev", "test", "prod") are mutable
+  - Aliases have their own ARN
   - Canary deployment via _weighting_
   - Aliases cannot reference other aliases (except `$LATEST`)
-  - Aliases can point to up to two versions at a time
+  - Aliases can point to up to two versions at a time, with adjustable percentages
 
 ### Lambda and CodeDeploy
 
