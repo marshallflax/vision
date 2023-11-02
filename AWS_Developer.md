@@ -517,12 +517,21 @@
 - API-compatible with Postgres (3x improvement) or MySQL (5x improvement)
 - Storage grows in 10GiB increments up to 128TiB
 - <10ms replica lag for up to 15 replicas (autoscaled!) via a Reader Endpoint.
+  - Reader endpoints may be autoscaled
 - <30s master failover (DNS) -- Writer Endpoint
 - 6 copies across 3AZ; 4 copies needed for writes, 3 for reads
   - Striped across 100s of volumes
 - Support for Cross-Region Replication
 - Optional ("Backtrack") Point-in-time restores without backups
 - CloudWatch: audit, error, general, slow query
+- Global deployment
+  - Option: Cross Region Read Replicas (simple, and useful for DR)
+  - Option: Aurora Global Database (recommended)
+    - Single primary region (writeable)
+    - Up to five secondary (readonly) regions
+      - Replication lag < 1s
+      - 16 Read Replicas per region
+      - RTO (promotion of secondary region to primary region) < 1m
 
 ### RDS/Aurora security
 
@@ -540,7 +549,7 @@
 - Connection pooling, especially for Lambda functions
 - Allows non-Aurora instances to require IAM authentication
 
-### Amazon Elastic Cache
+## Amazon Elastic Cache
 
 - Managed Redis or Memcached
   - Redis
@@ -1238,13 +1247,16 @@
   - Build image and push to repo
   - Pull-and-run
 - Services
-  - Elastic Container Registry (ECR) -- Docker images backed by S3
+  - Elastic Container Registry (ECR) -- Docker images backed by S3 (and usually created by CodeBuild)
     - Public <https://gallery.ecr.aws>
     - Private
       - EC2 instance role needs rights
-    - Also
-      - Vulnerability scanning
-      - Versioning, Tags, Lifecycle
+    - Vulnerability scanning
+    - Versioning
+    - Tags
+    - Lifecycle
+      - Expire untagged images (`tagStatus`) older than 14 days, or keep only a single untagged image, etc.
+      - Expiration rules applied at least daily
     - CLI
       - `aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $AWS_ACCT_ID.dkr.ecr.$REGION.amazonaws.com`
       - `docker push $AWS_ACCT_ID.dkr.ecr.$REGION.amazonaws.com/$IMAGE:latest`
@@ -2113,6 +2125,7 @@
         - Both Classic and Enhanced fan-out
     - AWS CLI with `aws kinesis get-shard-iterator` and then `aws kinesis get-records --shard-iterator $SHARD_ITERATOR` (return base-64 payloads _and_ a `NextShardIterator`)
       - NB: PartitionKey is returned with each record
+    Scalable using CloudWatch Metric `GetRecords.IteratorAgeMilliseconds` (processing lag)
   - VPC Endpoints are available for resources within VPC
   - Records
     - Partition key, sequence number, data blob (<1MB)
@@ -2158,16 +2171,23 @@
 
 ### Kinesis Data Analytics (KDA) - Analyze with SQL or Apache Flink
 
+- Kinesis Processing Unit (KPU) -- 1vCPU+4GiB RAM (and 50GiB storage for Flink)
+- Studio notebooks
+  - Serverless -- SQL, Python, Scala
+  - Based on <https://zeppelin.apache.org/> notebooks and Flink processing.
 - SQL Applications (fully managed, pay for consumption)
   - Source: Kinesis Data Streams or Kinesis Data Firehose
   - SQL can join in reference data stored in S3 for real-time enrichment
   - Target: Kinesis Data Streams (to Lambda or app) or Kinesis Data Firehose
   - Uses: Time-series analytics, real-time metrics and dashboards
 - Amazon Managed Service for Apache Flink
-  - Use Fink (Java, Scala, or SQL) to process and analyze streaming data
+  - Use Flink (Java, Scala, or SQL) to process and analyze streaming data (and batch)
   - Can read in Kinesis Data Streams and Amazon MSK (Managed Kafka)
   - Runs on a managed cluster; provides checkpoints and snapshots
 - Q: What type of aggregations are allowed?
+- Machine Learning
+  - RANDOM_CUT_FOREST -- SQL function for anomaly detection on numeric columns (based on recent history)
+  - HOTSPOTS -- detects relatively-dense regions (e.g. where there is a higher-than-usual error rate)
 
 ### Kinesis Video Streams - Capture, process, and store
 
