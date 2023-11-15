@@ -172,7 +172,7 @@
 
 ### IAM
 
-- Groups contain (many-to-many) users
+- User Groups contain (many-to-many) users
 - Users and groups can be assigned (many-to-many) JSON policy documents (containing statements -- Effect(Allow,Deny)/Principal(account/user/role)/Action(service:method)/Resource triples)/Condition
 - Roles assign permissions to trusted entities -- AWS service (e.g., EC2 or Lambda), AWS account, Web Identity, SAML 2.0 federation, etc -- to act on our behalf.
 - Account-level IAM Credentials Report (.csv)

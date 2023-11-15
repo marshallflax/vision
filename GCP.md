@@ -120,7 +120,7 @@
     | `kubernetes.io/dockerconfigjson`      | `~/.docker/config.json  |                                              |
     | `kubernetes.io/basic-auth`            | basic authn             | Username and password                        |
     | `kubernetes.io/ssh-auth`              | ssh authn               | Don't forget `known_hosts` as well!          |
-    | `kubernetes.io/tls`                   | TLS client or server    | Base64 PEM certs, keys, etc                      |
+    | `kubernetes.io/tls`                   | TLS client or server    | Base64 PEM certs, keys, etc                  |
     | `bootstrap.kubernetes.io/token`       | Bootstrap token         |                                              |
 
 ### K8s Pods
@@ -188,7 +188,7 @@
     - HBase-compatible
       - Key/value, sparsely-populated
         - Billions of rows, thousands of columns, PiB of data
-      - May be queried from BigQuery 
+      - May be queried from BigQuery
     - Pricing
       - Instance Type
       - Number of nodes
@@ -211,28 +211,117 @@
         - Background processing (e.g., create thumbnail)
   - MongoDB Atlas
 - In-memory
-  - Memorystore 
+  - Memorystore
     - Redis
     - Memcached
     - Memorystore for Redis Cluster
 
-## TODO
+## Redis
 
-- GitOps
-  - Cloud Source Repositories
-  - Whitesource RenovateBot
-  - Cloud Build
-    - Unit/pre-submit testing
-    - Integration testing
-    - Deployment
-- <https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html>
-  - BigQuery, BigTable, Logging, Spanner, Storage, Tasks, Trace, Datastore (now Firestore) (NoSQL), Pub/Sub, Secret Manager
-- <https://tekton.dev/>
-- <https://knative.dev/docs/concepts/>
-- <https://cloud.google.com/memorystore/docs/redis>
-- Parquet vs Avro vs Orc
-  |   | Avro | Orc | Parquet |
-  | - | ---- | --- | ------- |
+- GCP Redis cluster now Beta <https://cloud.google.com/blog/products/databases/memorystore-for-redis-cluster-launched>
+- Eventual consistency using CRDT (conflict-free replicated data types)
+- Server-side scripting in Lua
+- Virtual memory now deprecated
+- Journaling at least every 2s, with background rewriting
+- Client
+  - <https://lettuce.io/>
+    - Supported by <https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/>
+  - Usually use `RedisTemplate` (thread-safe) or `StringRedisTemplate`
+    - (Bound)?ValueOperations
+    - (Bound)?ListOperations
+    - (Bound)?SetOperations
+    - (Bound)?ZSetOperations (sorted)
+    - (Bound)?GeoOperations
+    - (Bound)?HashOperations
+    - (Bound)?HyperLogLogOperations
+
+## Apigee (API Proxy)
+
+- Rate limiting
+- XLB (External Load Balancer) to Apigee to ILB (Internal Load Balancer) to Anthos Service Mesh
+- REST, gRPC, GraphQL?
+- ML for threat detection?
+
+## Terraform
+
+- Current version is 1.6.3
+- Usage
+  - `terraform init`
+  - `terraform plan`
+  - `terraform apply`
+  - `terraform destroy`
+- Syntax
+  - Arguments and Blocks
+    - Arguments assign a value to a name
+    - Blocks has a type e.g., `resource`, zero-or-more labels (depending upon the type), and a block body within curly braces
+  - Top-level blocks
+    - `terraform`
+      - `required_version` (of TF)
+      - `required_providers`
+    - `provider`
+      - For `gcp`, set `project`, `region`, `zone`
+    - `resource`
+      - Specifies actual resources
+      - First label is type of resource, second label is the identifier to be used for the resource
+      - Meta-arguments
+        - `depends_on` 
+          - Only necessary when you're not using any of that resource's data
+          - Prefer expression references
+        - `count` or `for_each` (but not both)
+          - `${count.index}` (zero-based)
+          - `each.key` and `each.value`
+            - keys must be defined purely (no `uuid`, `bcrypt`, `timestamp`, etc)
+            - Neither keys nor values may contain sensitive data
+          - `self` (refers to instance within `provisioner` and `connection` sub-blocks)
+        - `provider`
+          - Might specify `region`, for example
+          - May have aliases
+        - `lifecycle`
+          - `create_before_destroy` 
+            - Propagates to dependencies
+          - `prevent_destroy`
+            - **Does not protect against removing the `resource` block entirely**
+          - `ignore_changes`
+            - Cannot apply to meta-arguments themselves
+          - `replace_triggered_by`
+          - `precondition` and `postcondition`
+    - `variable`
+      - One per module parameter, typically in `variables.tf`
+      - `type`, `description`, `default`, `sensitive`
+      - Precedence, highest to lowest
+        - Command-line (`-var`, and `var-file`)
+        - `*.auto.tfvars` or `*auto.tfvars.json`
+        - `terraform.tfvars.json`
+        - `terraform.tfvars`
+        - Environment vars
+        - Variable defaults
+    - `locals`
+      - Locally-defined variables
+      - Referenced with `local.` prefix
+    - `data`
+      - Variables populated from other APIs
+      - Referenced with `var.` prefix
+    - `output`
+      - Returned parameter
+    - `provisioner`
+      - Actions to be performed while creating resources
+      - `local-exec` and `remote-exec`
+    - `module`
+      - Multiple `.tf` and `.tf.json` files in a directory
+- TDD <https://www.hashicorp.com/resources/test-driven-development-tdd-for-infrastructure>
+  - <https://www.openpolicyagent.org/docs/latest/policy-language/>
+- Read file 1GiB into 8Meg.
+- EventHub -- highly scalable
+
+## Hashicorp Vault
+
+- Open-source, Managed, and Enterprise editions
+- Secrets, K8s secrets (Helm), dynamic secrets
+  - Automatically-rotated DB credentials, IAM, Automated X.509 PKI
+  - Data encryption and tokenization
+- Users/principals ("clients") authentication -- results in token:
+  - Azure, GCP, AWS, Alibaba, Oracle Cloud, GitHub, K8s
+  - LDAP, Okta, RADIUS, JWT/OIDC, PKI Cert, Custom
 
 ## "Done"
 
@@ -286,3 +375,126 @@
   - Working software vs. comprehensive documentation
   - Customer collaboration over contract negotiation
   - Responding to change over following a plan
+
+## Jakarta EE
+
+- Fujitsu, IBM, Oracle, Payara, Tomitribe, Microsoft, RedHat, etc
+- Java EE from Oracle, Eclipse Foundation for Cloud Native Java
+- Based on Java EE 8, but `javax.*` replaced with `jakarta.*` namespace. EPL2.0
+- Roadmap
+  - Microservice support
+  - Cloud Native Java (integrations with Docker and K8s)
+- Deployed as `war`
+- Annotations
+  - `@ApplicationScoped` -- singletons and active while processing requests
+
+## Docker
+
+- Dockerfile
+  - Respects `./.dockerignore` 
+    - Also `./docker/${DOCKER_FILE_NAME}.Dockerfile.dockerignore`
+    - Negate with `!` 
+    - Last line to match wins
+  - Must begin with `FROM` instruction, except comments, parser directives, and global ARGs
+    - `#` introduces comments
+    - Typical directive is ``# escape=` ``
+    - `FROM [--platform=<platform>] <image> [:<tag>|@<digest>] [AS <name>]`
+      - Platform defaults to build platform, but `linux/amd64`, `linux/arm64`, `windows/amd64` are common.
+      - If neither tag nor digest specified, then docker assumes `latest`; if tag or digest not found, build errors.
+      - `[AS <name>]` to allow subsequent `FROM` and `COPY --from=<name>` instructions
+    - Clears any state from previous `FROM` (e.g., when a single Dockerfile commits to multiple images)
+  - `ARG` -- build-time arguments (visible to `docker history`), perhaps with default value
+    - Specify with `--build-arg ${VAR}=${VALUE}`
+    - Prefer `RUN --mount=type=secret` for secrets!
+    - Predefined: `HTTP_PROXY`, `HTTPS_PROXY`, `FTP_PROXY`, `NO_PROXY`, and `ALL_PROXY` (plus all-lower-case)
+      - Omitted from `docker history`
+    - BuildKit backend provides `{TARGET,BUILD}{PLATFORM,OS,ARCH,VARIANT}` if corresponding `ARG` instruction
+  - `ENV var=value` -- declares environment variables
+    - Access via `$var` or `${var}`
+      - `${var:-def}` -- Default value
+      - `${var:+setVal}` -- If var is set then return setVal else empty string
+    - Supported by `ADD`, `COPY`, `ENV`, `EXPOSE`, `FROM`, `LABEL`, `STOPSIGNAL`, `USER`, `VOLUME`, `WORKDIR`, `ONBUILD` (combined with above)
+  - `CMD` -- at most one per Dockerfile (otherwise, last wins)
+    - Styles
+      - Exec style (preferred) -- `CMD ["pathToExecutable", "arg1", "arg2"]` (json syntax, so requires `"`)
+        - Does not run within a shell, though `CMD ["sh", "-c", "echo $HOME"]` is of course possible
+      - Default parameters to `ENTRYPOINT` -- `CMD ["arg1", "arg2"]`
+      - Shell form -- `CMD command arg1 arg2`
+        - Even `CMD echo "Hi Mom" | wc -`
+    - Overridden by `docker run` arguments
+  - `ENTRYPOINT` -- at most one per Dockerfile (otherwise, last wins)
+    - Should be defined when using the container as an executable
+    - `docker run <image>` command-line args are appended to exec-style ENTRYPOINT args, and are ignored for shell-style ENTRYPOINTs
+    - Shell form means that SIGTERM kills a `/bin/sh -c` rather the container when a `docker stop` is invoked. (But see <https://community.linuxmint.com/software/view/gosu>)
+  - `RUN` (shell form (`/bin/sh`) or exec form) -- executes in a new layer on top of the current image and commits results.
+    - Fortunately, commits and layers are cheap
+  - `RUN --mount` -- creates mounts accessible to the build
+    - `RUN --mount=type=bind` -- Bind-mount read-only (by default, but written data will be discarded in any case) context directories
+    - `RUN --mount=type=cache` -- Temp directories for caching compiler/package-manager data
+    - `RUN --mount=type=tmpfs` -- Temp directories for caching compiler/package-manager data
+    - `RUN --mount=type=secret` -- Access secure files without inclusion in image
+    - `RUN --mount=type=ssh` -- Access ssh keys (via ssh agents), including passphrase support
+    - Examples
+      - `RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked apt update && apt-get --no-install-recommends install -y gcc`
+      - `RUN --mount=type=secret,id=aws,target=/root/.aws/credentials aws s3 cp s3://... ...`
+  - `RUN --network=<type>` -- `default`, `none` (only `/dev/lo`), `host` (protected by `network.host` entitlement)
+  - `RUN --security=<type>` -- Not yet available
+  - `EXPOSE` -- `EXPOSE 80` or `EXPOSE 80/tcp`, or even `EXPOSE 8000-8080`
+    - `docker run -P` or `docker run --publish-all` automatically redirects to higher ports.
+    - `docker network` allows communication amongst containers
+  - `VOLUME` -- Creates a mount point for externally-mounted volumes
+    - Will contain anything which is in the created image at the time of the the `VOLUME` instruction
+  - `ENTRYPOINT`
+  - `USER` -- Sets the default user for the remainder of the current stage (`RUN`, `ENTRYPOINT`, `CMD`)
+    - `USER <user>[:group]` or `USER <uid>[:gid]`
+    - `root` group when the specified user doesn't have a primary group.
+  - `WORKDIR` -- Working dir from `RUN`, `CMD`, `ENTRYPOINT`, `COPY`, and `ADD`
+    - Creates directory if necessary
+    - Relative to current WORKDIR unless absolute
+  - `LABEL <key1>=<val1> <key2>=<val2> <key3>=<val3>` -- Add metadata to image
+    - Multiple `LABEL` instructions are fine
+    - View with `docker image inspect --format='{{json .Config.Labels}}' myImage`
+
+## Java VMs
+
+- GraalVM
+  - Quarkus (RedHat) -- k8s Native Java (OpenJDK Hotspot and GraalVM)
+  - GraalVM Community Edition, GraalVM Enterprise Edition, Mandrel (based on OpenJDK)
+  - <https://developers.redhat.com/e-books/quarkus-spring-developers>
+
+## Gradle
+
+- `dependencies`
+  - `providedCompile` -- required at compile-time but provided by WAR deployment environment
+
+## Misc
+
+- $(n/2)^2 + 2(n/4)^2 + 4(n/8)^2 + 8(n/16)^2 ... + n/2(2)^2$
+
+## TODO
+
+- GitOps
+  - Cloud Source Repositories
+  - Whitesource RenovateBot
+  - Cloud Build
+    - Unit/pre-submit testing
+    - Integration testing
+    - Deployment
+- <https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html>
+  - BigQuery, BigTable, Logging, Spanner, Storage, Tasks, Trace, Datastore (now Firestore) (NoSQL), Pub/Sub, Secret Manager
+- <https://tekton.dev/> (Linux Foundation)
+- <https://knative.dev/docs/concepts/>
+- <https://cloud.google.com/memorystore/docs/eedis>
+- | Avro                | Orc                           | Parquet                                                 |
+  | ------------------- | ----------------------------- | ------------------------------------------------------- |
+  | Row-based           | Columnar                      | Columnar                                                |
+  | Self-describing     | Zlib or Snappy compression    | Self-describing, per-column compression                 |
+  | Preferred for Kafka | Supports ACID for Apache Hive | AWS Athena, GCP BigQuery, Apache Spark, Drill, etc, etc |
+  | Schema evolution    |                               | Schema evolution                                        |
+- CQRS (Command Query Responsibility Separation)
+  - Redis CDC (Change Data Capture) -- eventual consistency
+- Event sourcing
+  - Store in Redis Streams
+- Native Java
+- Neo4j
+- Datapower
