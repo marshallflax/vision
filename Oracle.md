@@ -88,16 +88,16 @@
 
 ## Oracle Coherence
 
-- Originally Tangosol Coherence
+- (Originally Tangosol Coherence)
 - <https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.0/develop-applications/developing-applications-oracle-coherence.pdf>
 - Basic Concepts
-- Multicast to `224.0.0.0/4`
+  - Multicast to `224.0.0.0/4`
   - Clustered Data Management
     - Fully-coherent single-system-image (SSI)
     - Storage and processing scalability, transparent failover and failback, redundancy, cluster-wide locking/transactions
     - Database caching, HTTP session management, distributed queries, grid agent invocation
   - Logical Layer API; Physical layer XML configuration
-    - Topology can be deferred until production deployment
+    - Topology choice can be deferred until production deployment
   - Caching Strategies
     - Local Cache 
       - On heap within the local JVM
@@ -163,3 +163,39 @@
 - EAR
   - `/META-INF/application.xml`
     - `module` (`ejb`, `web`, `java`)
+
+## Eclipse MicroProfile
+
+- Context
+  - <https://vived.substack.com/p/will-jakarta-ee-compete-with-microprofile?sd=pf>
+  - <https://whichjdk.com/>
+- IBM, RedHat, Oracle, Microsoft, Fujitsu, Payara, etc
+- CDI 2.0
+  - Dependency Injection for Java -- JSR 330
+    - `@AutoWired` --> `@jakarta.inject.Inject`
+      - `@ConfigProperty(name="com.test.something", defaultValue="1")`
+    - `@Component` --> `@jakarta.annotation.ManagedBean` or `@Named`
+    - `@Scope("singleton")` --> `@Singleton`
+    - `@Qualifier` --> `@Qualifier` or `@Named`
+  - Context can be `@jakarta.enterprise.context.{Application,Session,Request}Scoped`
+    - `@PostConstruct` init methods possible`
+  - Cross-cutting concerns
+    - We could create a "`@Timed`" annotation as an `@InterceptorBinding` `@interface`
+  - Events
+    - `@Inject private jakarta.enterprise.event.Event<T> addTEvent;`
+    - `@Observes`
+
+## Helidon
+
+- <https://helidon.io/> (Oracle)
+  - <https://www.oracle.com/a/ocom/docs/technical-brief--helidon-report.pdf>
+  - <https://www.youtube.com/watch?v=gd00cu4Bw1I>
+- Helidon SE ("Helidon Reactive")
+  - Originally on top of netty, Helidon 4.0 is virtual-thread-based (Java SE 21) web server
+  - Reactive streams
+- Helidon MP ("Helidon MicroProfile")
+  - CDI
+  - JAX-RS, JSON-B, JSON-P
+  - GraphQL, CORS, gRPC
+  - Integrates with OpenTelemetry, Prometheus, Jaeger/Zipkin, K8s
+  - GraalVM, jlink, .jar

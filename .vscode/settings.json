@@ -70,10 +70,12 @@
         "GENEVE",
         "Geohash",
         "getenv",
+        "globbing",
         "gosu",
         "HDFS",
         "HEALTHCHECKS",
         "Heitor",
+        "Helidon",
         "HMAC",
         "hostnames",
         "Hotspot",
@@ -88,6 +90,7 @@
         "javax",
         "JDBC",
         "Jedis",
+        "jlink",
         "JNDI",
         "Journaled",
         "Journaling",
@@ -169,6 +172,7 @@
         "WORKDIR",
         "wscat",
         "WSRP",
-        "xlarge"
+        "xlarge",
+        "Zipkin"
     ]
 }
