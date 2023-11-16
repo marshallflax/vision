@@ -72,3 +72,4 @@
   - Multiple `LABEL` instructions are fine
   - View with `docker image inspect --format='{{json .Config.Labels}}' myImage`
   - <https://github.com/opencontainers/image-spec/blob/main/annotations.md>
+- `ONBUILD ADD`, `ONBUILD RUN` -- instruction to be executed when the current image is a base for another image

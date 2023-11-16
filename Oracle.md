@@ -12,7 +12,7 @@
   - 11gR1 -- 2009-07
   - 12cR1 -- 2011-12
   - 12cR2 -- 2015-10
-  - 14cR1 -- 2020-03 
+  - 14cR1 -- 2020-03
     - Java EE 8
       - Java API for JSON Binding (JSON-B) -- <https://javaee.github.io/jsonb-spec/>
       - Java API for JSON Processing (JSON-P) -- <https://javaee.github.io/jsonp/> -- Streaming and object APIs
@@ -22,7 +22,7 @@
       - Java Servlet 4.0 -- JSR 369 -- HTTP/2, server push, HTTP trailer, mapping discover
         - HTTP/2 and TLSv1.3
       - Bean Validation 2.0 -- JSR 380
-      - CDI 2.0 
+      - CDI 2.0
         - Dependency Injection for Java -- JSR 330
           - `@AutoWired` --> `@jakarta.inject.Inject`
           - `@Component` --> `@jakarta.annotation.ManagedBean` or `@Named`
@@ -45,7 +45,7 @@
       - WebLogic Logging Exporter
     - WDT (WebLogic Deploy Tooling) -- YAML -- <https://github.com/oracle/weblogic-deploy-tooling>
   - 14cR2 -- 2024???
-     Jakarta EE 8
+    Jakarta EE 8
     - Java SE 17 LTS
 - Part of Oracle Fusion Middleware
   - Supports JDBC databases -- Oracle, DB2, SQLServer, MySQL Enterprise, etc
@@ -99,10 +99,10 @@
   - Logical Layer API; Physical layer XML configuration
     - Topology choice can be deferred until production deployment
   - Caching Strategies
-    - Local Cache 
+    - Local Cache
       - On heap within the local JVM
       - By default Replicated, Optimistic, and Near Cache also use this
-    - Distributed Cache 
+    - Distributed Cache
       - Dynamic and automatic partitioning
       - Incremental data shifting
     - Near Cache
@@ -147,7 +147,7 @@
   - Transactions
     - Basic concurrency with `ConcurrentMap` and `EntryProcessor`
     - Partition-level transactions using `EntryProcessor`
-  - HTTP Session management ("Coherence*Web")
+  - HTTP Session management ("Coherence\*Web")
   - ORM Integration (L2 cache)
 - Management via JMX
 
@@ -184,6 +184,67 @@
   - Events
     - `@Inject private jakarta.enterprise.event.Event<T> addTEvent;`
     - `@Observes`
+- MicroProfile 6.0 -- <https://helidon.io/docs/v4/#/mp/introduction>
+  - Jakarta
+    - Bean Validation -- 3.0
+    - CDI -- 4.0.1
+    - JSON-P -- 2.1.1
+    - JSON-B -- 3.0
+    - JAX-RS -- 3.1.0
+    - JPA -- 3.1.0
+    - JTA (Transactions) -- 2.0
+    - Websocket -- 2.1.0
+  - MicroProfile
+    - Config -- 3.0.3
+    - Fault Tolerance -- 4.0.2
+    - GraphQL -- 2.0
+    - Health -- 4.0
+    - JWT Auth -- 2.1
+    - LRA (Long-Running Actions) -- 2.0
+    - Metric -- 5.0.1
+    - Open API -- 3.1
+      - Previously "Swagger", now <https://www.openapis.org/> (Linux Foundation)
+      - Language-agnostic; declarative specification <https://learn.openapis.org/>
+      - OpenAPI Description, e.g. openapi.yaml
+        ```yaml
+        openapi: 3.1.0
+        info:
+          title: A minimal service
+          version: 0.0.1
+        paths:
+          /hello:
+            get:
+              summary: Say hello
+              description: something
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      $ref: "#/components/schemas/something"
+              responses:
+                "200":
+                  description: Fine
+                  content:
+                    application/json: # Or `text/html` or even `text/*`
+                      scheme:
+                        $ref: "#/components/schemas/status"
+                "404": 
+        components:
+          parameters:
+            paramType1:
+          schemas:
+            something:
+              type: integer
+            status:
+              type: object
+              properties:
+        ```
+    - OpenTracing -- 3.0
+    - Reactive Messaging -- 3.0
+    - Reactive Streams Operators -- 3.1.1
+    - REST Client -- 3.0
+  - CORS, gRPC, OCI SDK, Scheduling, Security
 
 ## Helidon
 
