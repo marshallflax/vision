@@ -188,8 +188,8 @@
   - Jakarta
     - Bean Validation -- 3.0
     - CDI -- 4.0.1
-    - JSON-P -- 2.1.1
-    - JSON-B -- 3.0
+    - JSON-P -- 2.1.1 (`Json.createArrayBuilder().add(...)....build()`)
+    - JSON-B -- 3.0 (`.toJson()`, `.fromJson()`)
     - JAX-RS -- 3.1.0
     - JPA -- 3.1.0
     - JTA (Transactions) -- 2.0
@@ -260,3 +260,39 @@
   - GraphQL, CORS, gRPC
   - Integrates with OpenTelemetry, Prometheus, Jaeger/Zipkin, K8s
   - GraalVM, jlink, .jar
+  - Integrates with WebLogic -- <https://blogs.oracle.com/weblogicserver/post/announcing-weblogic-helidon-integration>
+    - Single-Sign-on MicroTx transactions
+    - Transactions with MicroTx (WebLogic Server 14.1.1 and Helidon MP 2.6.2)
+- Helidon 4.0.0
+  - Java SE 21, Maven 3.8+, Docker 18.09+, Kubectl 1.16.5+
+
+## MicroTx (Transaction Manager)
+
+## Verrazzano (K8s-based container platform)
+
+- Multi-cloud and hybrid
+- Support for WebLogic, Coherence, Helidon
+- Monitoring, integrated security, DevOps and GitOps
+
+## Installation
+
+- `choco install openjdk` # 21.0.1, `C:\Program Files\OpenJDK`
+- `choco install graalvm-java21` # 21.0.0, `C:\Program Files\GraalVM`
+- ~~`choco install kubernetes-cli` # 1.28.2, `C:\ProgramData\chocolatey\lib\kubernetes-cli\tools\kubectl.exe`~~
+- ~~`choco install minikube` # 1.32.0, `C:\ProgramData\chocolatey\lib\MiniKube`~~
+- ~~`choco install docker-cli` # 24.0.5~~
+- ~~`choco install docker-desktop` # v4.25.1~~
+- (WSL) `sudo snap install kubectl --classic`
+- (WSL) `minikube.exe start`
+- (WSL) `ln -s "/mnt/c/users/mgflax/.kube" ~/.kube`
+- WSL
+  - `sudo apt update && sudo apt upgrade && sudo apt install containerd`
+  - `wsl --shutdown` (from PS)
+  - `curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x ./minikube && sudo mv ./minikube /usr/local/bin`
+  - Enable hyperv
+  - `minikube config set driver hyperv`
+- PowerShell
+  - `choco install minikube` # 1.32.1, `C:\ProgramData\chocolatey\lib\MiniKube`
+- Git bash
+  - `kubectl completion bash > ~/bash_completion.d/kubectl && echo "source ~/bash_completion.d/kubectl" >> ~/.bashrc`
+  - `minikube completion bash > ~/bash_completion.d/minikube && echo "source ~/bash_completion.d/kubectl" >> ~/.bashrc`

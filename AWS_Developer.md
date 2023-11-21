@@ -3964,6 +3964,19 @@
     - Callbacks -- `v-on:click="callback()"`
       - Can `$emit` other events
     - Models -- `v-model` and `defineModule<string>()`
+      - Two-way binding to DOM elements
+        - `<input v-model="searchText"/>` <==> `<input :value="searchText" @input="searchText=$event.target.value"/>`
+        - `<CustomInput v-model="searchText"/>` <==> `<CustomInput :model-value="searchText" @update:model-input="newVal => searchText = newVal"/>`
+    - Interpolation
+      - `{{ }}` ("mustaches") include plain text
+      - `<span v-html="<strikeout>abc</strikeout>"/>` is vulnerable to XSS
+      - Attributes use `v-bind`, e.g. `<div v-bind:id="dynamicId">` 
+        - Syntactic sugar: `<div :id="dynamicId">`
+        - `null` or `undefined` remove attribute. (For the `disabled` attribute, falsy values other than `""` remove the attribute
+      - Multiple attributes in a dictionary can be bound as a unit, e.g. `<div v-bind="attrObject">`
+      - JS **expressions** within data bindings: `{{ num+1 }}`, `{{ ok ? "YES" : "NO" }}`, `{{ message.split('').reverse().join('') }}`, `<div :id="`list-${id}`">`
+        - NB: Side-effects are a very bad idea
+        - Globals (other than `Math`, `Date`, etc) must be allowlisted in `app.config.globalProperties`
 - APIs -- Options and Composition (newer)
 - Single-File Component (SFC) -- `.vue`
 
