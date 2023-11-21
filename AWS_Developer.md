@@ -3974,7 +3974,7 @@
         - Syntactic sugar: `<div :id="dynamicId">`
         - `null` or `undefined` remove attribute. (For the `disabled` attribute, falsy values other than `""` remove the attribute
       - Multiple attributes in a dictionary can be bound as a unit, e.g. `<div v-bind="attrObject">`
-      - JS **expressions** within data bindings: `{{ num+1 }}`, `{{ ok ? "YES" : "NO" }}`, `{{ message.split('').reverse().join('') }}`, `<div :id="`list-${id}`">`
+      - JS **expressions** within data bindings: `{{ num+1 }}`, `{{ ok ? "YES" : "NO" }}`, `{{ message.split('').reverse().join('') }}`, ``<div :id="`list-${id}`">``
         - NB: Side-effects are a very bad idea
         - Globals (other than `Math`, `Date`, etc) must be allowlisted in `app.config.globalProperties`
 - APIs -- Options and Composition (newer)
