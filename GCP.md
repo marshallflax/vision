@@ -86,10 +86,12 @@
 - Server-side scripting in Lua
 - Virtual memory now deprecated
 - Journaling at least every 2s, with background rewriting
-- Client
+- Clients
+  - <https://github.com/redis/jedis> -- Only synchronous
+  - <https://redis.io/commands/>
   - <https://lettuce.io/>
     - Supported by <https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/>
-  - Usually use `RedisTemplate` (thread-safe) or `StringRedisTemplate`
+    - Usually use `RedisTemplate` (thread-safe) or `StringRedisTemplate`
     - (Bound)?ValueOperations
     - (Bound)?ListOperations
     - (Bound)?SetOperations
@@ -97,6 +99,7 @@
     - (Bound)?GeoOperations
     - (Bound)?HashOperations
     - (Bound)?HyperLogLogOperations
+  - <https://redisson.org/feature-comparison-redisson-vs-lettuce.html>
 
 ## Apigee (API Proxy)
 
