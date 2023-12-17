@@ -140,6 +140,8 @@ module jakarta.cdi.lang.model {
     - OpenAPI Description, e.g. openapi.yaml
   - Open Telemetry 1.0
   - OpenTracing -- 3.0
+  - Reactive Messaging - 3.0
+    - Beans are `@ApplicationScoped` or `@Dependent`
   - Reactive Streams Operators -- 3.1.1
   - RESTful Web Services Client -- 3.0
     - `jakarta.ws.rs.client.ClientBuilder.newClient()....`

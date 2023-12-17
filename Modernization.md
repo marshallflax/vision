@@ -22,6 +22,9 @@
 
 - Leave state to the experts
   - Redis
+    - ACID -- Atomic, Consistent, Isolated, Durable
+    - BASE -- Basically Available, Soft state, Eventually-consistent
+    - CAP -- Consistency, Availability, Partition-tolerance
   - Pub/Sub
   - Cloud Spanner
   - Databases

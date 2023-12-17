@@ -59,7 +59,7 @@
       - Migrate to Redis?
     - Oracle TopLink
     - Oracle WebLogic Server Web Services
-    - Tuxedo
+    - Tuxedo (X/Open XA two-phase commit)
   - Standards
     - BPEL and BPEL-J (Business Process Execution Language -- XML SOA definition)
     - ebXML (e-business XML)
